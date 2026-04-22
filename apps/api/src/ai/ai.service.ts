@@ -20,15 +20,15 @@ export class AIService {
   private readonly apiKey: string
 
   constructor(private readonly config: ConfigService) {
-    this.apiKey = this.config.get<string>('app.openaiApiKey', '')
+    this.apiKey = this.config.get<string>('app.geminiApiKey', '')
     if (!this.apiKey) {
-      this.logger.warn('OPENAI_API_KEY is not set — AI bot creation will not work')
+      this.logger.warn('GEMINI_API_KEY is not set — AI bot creation will not work')
     }
   }
 
   async generateConfigFromPrompt(prompt: string): Promise<AIConfigResult> {
     if (!this.apiKey) {
-      throw new BadRequestException('AI xizmati sozlanmagan (OPENAI_API_KEY)')
+      throw new BadRequestException('AI xizmati sozlanmagan (GEMINI_API_KEY)')
     }
 
     if (!prompt || prompt.trim().length < 10) {
@@ -38,20 +38,18 @@ export class AIService {
     const templates = getActiveTemplates()
     const templateList = templates.map(t => `- ${t.key}: ${t.name} — ${t.description}`).join('\n')
 
-    // Build field descriptions for each template
     const templateDetails = templates.map(t => {
       const def = getTemplateDef(t.key)
       if (!def) return ''
       const fields = def.fields.map(f => {
         let info = `    - ${f.name} (${f.type}${f.required ? ', required' : ', optional'}): ${f.label}`
         if (f.defaultValue !== undefined) info += ` [default: ${JSON.stringify(f.defaultValue)}]`
-        if (f.options) info += ` [options: ${f.options.map(o => o.value).join(', ')}]`
         return info
       }).join('\n')
       return `  ${t.key}:\n${fields}`
     }).join('\n\n')
 
-    const systemPrompt = `Sen BotForge platformasi uchun AI yordamchisan. Foydalanuvchi Telegram bot yaratmoqchi.
+    const systemInstruction = `Sen BotForge platformasi uchun AI yordamchisan. Foydalanuvchi Telegram bot yaratmoqchi.
 Uning tavsifiga qarab eng mos shablonni tanla va config to'ldir.
 
 MAVJUD SHABLONLAR:
@@ -69,7 +67,7 @@ MUHIM QOIDALAR:
 6. services va timeSlots maydoni JSON string bo'lishi kerak: '["...","..."]'
 7. categories maydoni JSON string bo'lishi kerak: '["...","..."]'
 
-JAVOB FORMATI — faqat JSON, boshqa hech narsa:
+JAVOB FORMATI — faqat JSON, boshqa hech narsa yozma:
 {
   "templateKey": "tanlangan-shablon-key",
   "config": { ...maydonlar... },
@@ -77,20 +75,19 @@ JAVOB FORMATI — faqat JSON, boshqa hech narsa:
 }`
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.apiKey}`
+
+      const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.3,
-          max_tokens: 2000,
+          system_instruction: { parts: [{ text: systemInstruction }] },
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 2000,
+            responseMimeType: 'application/json',
+          },
         }),
       })
 
@@ -101,23 +98,21 @@ JAVOB FORMATI — faqat JSON, boshqa hech narsa:
       }
 
       const data = await response.json() as {
-        choices: Array<{ message: { content: string } }>
+        candidates: Array<{ content: { parts: Array<{ text: string }> } }>
       }
 
-      const content = data.choices?.[0]?.message?.content?.trim()
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
       if (!content) {
         throw new BadRequestException('AI javob bermadi')
       }
 
-      // Parse JSON from response (handle markdown code blocks)
-      const jsonStr = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
       let parsed: { templateKey: string; config: Record<string, unknown>; explanation: string }
 
       try {
-        parsed = JSON.parse(jsonStr)
+        parsed = JSON.parse(content)
       } catch {
         logError(this.logger, 'ai.parse_error', { content: content.slice(0, 200) })
-        throw new BadRequestException('AI javobi noto\'g\'ri formatda')
+        throw new BadRequestException("AI javobi noto'g'ri formatda")
       }
 
       // Validate template exists
@@ -126,7 +121,7 @@ JAVOB FORMATI — faqat JSON, boshqa hech narsa:
         throw new BadRequestException(`AI tanlagan shablon topilmadi: ${parsed.templateKey}`)
       }
 
-      // Ensure botToken and ownerChatId are empty (user fills them)
+      // Ensure botToken and ownerChatId are empty
       parsed.config.botToken = ''
       parsed.config.ownerChatId = ''
 
