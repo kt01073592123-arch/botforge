@@ -1,0 +1,77 @@
+{
+  "common": {
+    "loading": "Loading\u2026",
+    "close": "Close",
+    "dismiss": "dismiss",
+    "backToDashboard": "\u2190 Back to dashboard"
+  },
+  "project": {
+    "breadcrumb": "\u2190 My Bots",
+    "updated": "Updated {time}",
+    "notFound": "Project not found",
+    "notFoundDesc": "This project doesn\u2019t exist or you don\u2019t have access to it.",
+    "loadError": "Failed to load project.",
+
+    "template": "Template",
+    "templateNone": "No template selected",
+    "templateSelect": "Select",
+    "templateChange": "Change",
+
+    "config": "Configuration",
+    "configSelectFirst": "Select a template first",
+    "configNotSaved": "Not saved yet",
+    "configSaved": "Saved {time}",
+    "configEdit": "Edit",
+
+    "source": "Bot Source",
+    "sourceReady": "Ready to generate",
+    "sourceSummary": "v{version} \u00b7 {count} files \u00b7 generated {time}",
+    "sourceFiles": "Files:",
+    "sourceEnvVars": "Env vars required at deploy time:",
+
+    "deployment": "Deployment",
+    "deployReady": "Ready to deploy",
+    "deployQueued": "Queued in pipeline\u2026",
+    "deployInProgress": "Deploying\u2026",
+    "deployInProgressDesc": "Installing dependencies, building, starting PM2 process",
+    "deployLive": "Live",
+    "deployFailed": "Last deploy failed",
+    "deployBotLive": "Bot is live",
+    "deployFailedTitle": "Deployment failed",
+    "deployPm2": "PM2 process:",
+    "deployDeployed": "Deployed {time}",
+
+    "generateBtn": "Generate Bot",
+    "generateBtnActive": "Generating\u2026",
+    "generateBtnRe": "Re-generate",
+    "generateFailed": "Generation failed.",
+
+    "deployBtn": "Deploy Bot",
+    "deployBtnActive": "Deploying\u2026",
+    "deployBtnRedeploy": "Redeploy",
+    "deployBtnRetry": "Retry Deploy",
+    "deployFail": "Deploy failed.",
+
+    "blockSelectTemplate": "Select a template first",
+    "blockSaveConfig": "Save your config first",
+    "blockPayGenerate": "Payment required \u2014 purchase access to generate your bot",
+    "blockGenerateFirst": "Generate the bot source first",
+    "blockPayDeploy": "Payment required \u2014 purchase access to deploy your bot",
+
+    "paymentBanner": "Your bot is configured and ready. Purchase access to generate and deploy it.",
+    "paymentCta": "Get access \u2192",
+
+    "stepTemplate": "Template",
+    "stepConfig": "Config",
+    "stepSource": "Source",
+    "stepLive": "Live"
+  },
+  "configForm": {
+    "loadError": "Failed to load configuration.",
+    "saveError": "Failed to save configuration.",
+    "saveBtn": "Save configuration",
+    "saving": "Saving\u2026",
+    "lastSaved": "Last saved {time}",
+    "secretHint": "Leave blank to keep the current saved value"
+  }
+}

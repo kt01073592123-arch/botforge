@@ -1,0 +1,31 @@
+{
+  "botType": "lead-capture",
+  "connection": {
+    "botToken": "{{BOT_TOKEN}}",
+    "ownerChatId": "{{OWNER_CHAT_ID}}"
+  },
+  "appearance": {
+    "welcomeMessage": "Assalomu alaykum! 👋 Iltimos ma'lumotlaringizni qoldiring.",
+    "language": "uz"
+  },
+  "collectFields": {
+    "fields": [
+      { "key": "name", "label": "Ism", "type": "text", "required": true, "prompt": "Ismingizni kiriting:" },
+      { "key": "email", "label": "Email", "type": "email", "required": true, "prompt": "Email manzilingizni kiriting:", "errorMessage": "Email formati noto'g'ri" },
+      { "key": "phone", "label": "Telefon", "type": "contact_share", "required": false, "prompt": "Telefon raqamingizni yuboring:" }
+    ],
+    "successMessage": "Rahmat! Tez orada bog'lanamiz. ✅"
+  },
+  "admin": {
+    "extraAdminIds": [],
+    "statsEnabled": true,
+    "exportEnabled": false,
+    "dailySummaryHour": null
+  },
+  "menu": null,
+  "catalog": null,
+  "booking": null,
+  "support": null,
+  "statusWorkflow": null,
+  "ai": null
+}

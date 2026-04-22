@@ -1,0 +1,35 @@
+{
+  "botType": "booking",
+  "connection": {
+    "botToken": "{{BOT_TOKEN}}",
+    "ownerChatId": "{{OWNER_CHAT_ID}}"
+  },
+  "appearance": {
+    "welcomeMessage": "Assalomu alaykum! 📅 Xizmatimizga bron qilish uchun tanlang.",
+    "language": "uz"
+  },
+  "booking": {
+    "businessName": "Premium Barbershop",
+    "services": ["Soch olish", "Soqol olish", "Soch + Soqol", "Yuz parvarishi"],
+    "timeSlots": ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00"],
+    "confirmationMessage": "Broningiz qabul qilindi! ✅ Belgilangan vaqtda kutamiz."
+  },
+  "collectFields": {
+    "fields": [
+      { "key": "name", "label": "Ism", "type": "text", "required": true, "prompt": "Ismingizni kiriting:" },
+      { "key": "phone", "label": "Telefon", "type": "contact_share", "required": true, "prompt": "Telefon raqamingizni yuboring:" }
+    ],
+    "successMessage": "Bron tasdiqlandi! ✅"
+  },
+  "admin": {
+    "extraAdminIds": [],
+    "statsEnabled": true,
+    "exportEnabled": false,
+    "dailySummaryHour": null
+  },
+  "menu": null,
+  "catalog": null,
+  "support": null,
+  "statusWorkflow": null,
+  "ai": null
+}

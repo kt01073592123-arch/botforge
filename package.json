@@ -1,0 +1,43 @@
+{
+  "name": "botforge",
+  "version": "0.0.1",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @botforge/web dev",
+    "dev:api": "pnpm --filter @botforge/api start:dev",
+    "dev:worker": "pnpm --filter @botforge/worker dev",
+    "build:web": "pnpm --filter @botforge/web build",
+    "build:api": "pnpm --filter @botforge/api build",
+    "build:worker": "pnpm --filter @botforge/worker build",
+    "typecheck": "pnpm --filter './apps/*' --filter './packages/*' typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "prettier": "^3.2.5",
+    "prisma": "^5.8.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.8.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "bcrypt",
+      "@nestjs/core",
+      "msgpackr-extract"
+    ]
+  }
+}

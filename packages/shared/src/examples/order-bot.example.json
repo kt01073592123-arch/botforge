@@ -1,0 +1,61 @@
+{
+  "botType": "order",
+  "connection": {
+    "botToken": "{{BOT_TOKEN}}",
+    "ownerChatId": "{{OWNER_CHAT_ID}}"
+  },
+  "appearance": {
+    "welcomeMessage": "Assalomu alaykum! 🛒 Buyurtma berish uchun mahsulotni tanlang.",
+    "language": "uz"
+  },
+  "catalog": {
+    "items": [
+      { "name": "Lavash", "price": 25000, "available": true },
+      { "name": "Shaurma", "price": 30000, "available": true },
+      { "name": "Burger", "price": 35000, "available": true },
+      { "name": "Pepsi 0.5L", "price": 8000, "available": true }
+    ],
+    "currency": "UZS",
+    "minOrderAmount": 20000
+  },
+  "collectFields": {
+    "fields": [
+      { "key": "name", "label": "Ism", "type": "text", "required": true, "prompt": "Ismingizni kiriting:" },
+      { "key": "phone", "label": "Telefon", "type": "contact_share", "required": true, "prompt": "Telefon raqamingizni yuboring:" },
+      { "key": "address", "label": "Manzil", "type": "text", "required": true, "prompt": "Yetkazib berish manzilini kiriting:" }
+    ],
+    "successMessage": "Buyurtmangiz qabul qilindi! ✅ Tez orada yetkazamiz."
+  },
+  "statusWorkflow": {
+    "enabled": true,
+    "steps": [
+      { "key": "new", "label": "Yangi", "notifyAdmin": true, "notifyUser": false },
+      { "key": "confirmed", "label": "Tasdiqlangan", "notifyAdmin": false, "notifyUser": true, "userMessage": "Buyurtmangiz tasdiqlandi! 🎉" },
+      { "key": "preparing", "label": "Tayyorlanmoqda", "notifyAdmin": false, "notifyUser": true, "userMessage": "Buyurtmangiz tayyorlanmoqda 🍳" },
+      { "key": "delivering", "label": "Yo'lda", "notifyAdmin": false, "notifyUser": true, "userMessage": "Buyurtmangiz yo'lda! 🚗" },
+      { "key": "completed", "label": "Yakunlangan", "notifyAdmin": false, "notifyUser": false }
+    ]
+  },
+  "admin": {
+    "extraAdminIds": [],
+    "statsEnabled": true,
+    "exportEnabled": true,
+    "dailySummaryHour": 20
+  },
+  "ai": {
+    "enabled": false,
+    "provider": "openai",
+    "apiKey": "",
+    "model": "",
+    "mode": "sales",
+    "systemPrompt": "",
+    "temperature": 0.7,
+    "maxTokens": 500,
+    "fallbackMessage": "Kechirasiz, tushunmadim.",
+    "fallbackToHuman": true,
+    "knowledgeBase": []
+  },
+  "menu": null,
+  "booking": null,
+  "support": null
+}

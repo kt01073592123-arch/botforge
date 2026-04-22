@@ -1,0 +1,52 @@
+{
+  "botType": "support",
+  "connection": {
+    "botToken": "{{BOT_TOKEN}}",
+    "ownerChatId": "{{OWNER_CHAT_ID}}"
+  },
+  "appearance": {
+    "welcomeMessage": "Assalomu alaykum! 🛟 Qanday yordam bera olamiz?",
+    "language": "uz"
+  },
+  "support": {
+    "categories": ["Texnik muammo", "To'lov masalasi", "Taklif/Shikoyat", "Boshqa"],
+    "autoReplyEnabled": true,
+    "autoReplyMessage": "Murojaatingiz qabul qilindi. Operator tez orada javob beradi.",
+    "escalationMessage": "Mutaxassis tez orada siz bilan bog'lanadi."
+  },
+  "statusWorkflow": {
+    "enabled": true,
+    "steps": [
+      { "key": "open", "label": "Ochiq", "notifyAdmin": true, "notifyUser": false },
+      { "key": "in_progress", "label": "Ko'rilmoqda", "notifyAdmin": false, "notifyUser": true, "userMessage": "Murojaatingiz ko'rilmoqda ⏳" },
+      { "key": "resolved", "label": "Hal qilindi", "notifyAdmin": false, "notifyUser": true, "userMessage": "Muammo hal qilindi! ✅" },
+      { "key": "closed", "label": "Yopildi", "notifyAdmin": false, "notifyUser": false }
+    ]
+  },
+  "admin": {
+    "extraAdminIds": [],
+    "statsEnabled": true,
+    "exportEnabled": true,
+    "dailySummaryHour": 18
+  },
+  "ai": {
+    "enabled": true,
+    "provider": "openai",
+    "apiKey": "{{AI_API_KEY}}",
+    "model": "gpt-4o-mini",
+    "mode": "support",
+    "systemPrompt": "Sen texnik support botisan. Foydalanuvchilarning savollariga bilim bazasi asosida javob ber. Javob bera olmasang, operatorga yo'naltir.",
+    "temperature": 0.3,
+    "maxTokens": 500,
+    "fallbackMessage": "Bu savolga hozir javob bera olmayapman. Operator tez orada bog'lanadi.",
+    "fallbackToHuman": true,
+    "knowledgeBase": [
+      { "question": "Ish vaqti qanday?", "answer": "Dushanba-Juma, 09:00-18:00" },
+      { "question": "Qaytarish mumkinmi?", "answer": "Ha, 14 kun ichida qaytarish mumkin. Chek va qadoq saqlanishi kerak." }
+    ]
+  },
+  "menu": null,
+  "collectFields": null,
+  "catalog": null,
+  "booking": null
+}

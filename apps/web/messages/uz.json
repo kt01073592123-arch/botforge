@@ -1,0 +1,77 @@
+{
+  "common": {
+    "loading": "Yuklanmoqda\u2026",
+    "close": "Yopish",
+    "dismiss": "yopish",
+    "backToDashboard": "\u2190 Boshqaruv paneliga"
+  },
+  "project": {
+    "breadcrumb": "\u2190 Mening botlarim",
+    "updated": "Yangilangan: {time}",
+    "notFound": "Loyiha topilmadi",
+    "notFoundDesc": "Bu loyiha mavjud emas yoki sizda unga kirish huquqi yo\u2018q.",
+    "loadError": "Loyihani yuklashda xatolik yuz berdi.",
+
+    "template": "Shablon",
+    "templateNone": "Shablon tanlanmagan",
+    "templateSelect": "Tanlash",
+    "templateChange": "O\u2018zgartirish",
+
+    "config": "Sozlamalar",
+    "configSelectFirst": "Avval shablon tanlang",
+    "configNotSaved": "Hali saqlanmagan",
+    "configSaved": "Saqlangan: {time}",
+    "configEdit": "Tahrirlash",
+
+    "source": "Bot kodi",
+    "sourceReady": "Generatsiya qilishga tayyor",
+    "sourceSummary": "v{version} \u00b7 {count} ta fayl \u00b7 yaratilgan: {time}",
+    "sourceFiles": "Fayllar:",
+    "sourceEnvVars": "Deploy vaqtida kerak bo\u2018ladigan muhit o\u2018zgaruvchilari:",
+
+    "deployment": "Deploy",
+    "deployReady": "Deployga tayyor",
+    "deployQueued": "Navbatda kutilmoqda\u2026",
+    "deployInProgress": "Deploy qilinmoqda\u2026",
+    "deployInProgressDesc": "Paketlar o\u2018rnatilmoqda, build qilinmoqda, PM2 ishga tushirilmoqda",
+    "deployLive": "Ishlayapti",
+    "deployFailed": "Oxirgi deploy muvaffaqiyatsiz",
+    "deployBotLive": "Bot ishlayapti",
+    "deployFailedTitle": "Deploy muvaffaqiyatsiz",
+    "deployPm2": "PM2 jarayon:",
+    "deployDeployed": "Deploy qilingan: {time}",
+
+    "generateBtn": "Bot yaratish",
+    "generateBtnActive": "Yaratilmoqda\u2026",
+    "generateBtnRe": "Qayta yaratish",
+    "generateFailed": "Generatsiya muvaffaqiyatsiz.",
+
+    "deployBtn": "Deployga yuborish",
+    "deployBtnActive": "Deploy qilinmoqda\u2026",
+    "deployBtnRedeploy": "Qayta deploy",
+    "deployBtnRetry": "Qayta urinish",
+    "deployFail": "Deploy muvaffaqiyatsiz.",
+
+    "blockSelectTemplate": "Avval shablon tanlang",
+    "blockSaveConfig": "Avval sozlamalarni saqlang",
+    "blockPayGenerate": "To\u2018lov talab qilinadi \u2014 bot yaratish uchun xarid qiling",
+    "blockGenerateFirst": "Avval bot kodini yarating",
+    "blockPayDeploy": "To\u2018lov talab qilinadi \u2014 deploy qilish uchun xarid qiling",
+
+    "paymentBanner": "Botingiz sozlangan va tayyor. Yaratish va deploy qilish uchun xarid qiling.",
+    "paymentCta": "Xarid qilish \u2192",
+
+    "stepTemplate": "Shablon",
+    "stepConfig": "Sozlamalar",
+    "stepSource": "Kod",
+    "stepLive": "Jonli"
+  },
+  "configForm": {
+    "loadError": "Sozlamalarni yuklashda xatolik yuz berdi.",
+    "saveError": "Sozlamalarni saqlashda xatolik yuz berdi.",
+    "saveBtn": "Sozlamalarni saqlash",
+    "saving": "Saqlanmoqda\u2026",
+    "lastSaved": "Oxirgi saqlangan: {time}",
+    "secretHint": "Joriy qiymatni saqlab qolish uchun bo\u2018sh qoldiring"
+  }
+}

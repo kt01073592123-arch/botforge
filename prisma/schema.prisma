@@ -1,0 +1,190 @@
+// prisma/schema.prisma
+// Shared database schema for BotForge
+// Run: pnpm db:generate  →  generates @prisma/client
+// Run: pnpm db:push      →  syncs schema to database (dev)
+// Run: pnpm db:migrate   →  creates a migration file (production)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ────────────────────────────────────────────────────────────────────
+
+enum ProjectStatus {
+  DRAFT
+  CONFIGURED
+  GENERATING
+  GENERATED
+  DEPLOYING
+  LIVE
+  FAILED
+  ARCHIVED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// ── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         UserRole @default(USER)
+  // Denormalised flag — set to true by the Stripe webhook when a payment
+  // is confirmed. Checked on every generate/deploy request for O(1) enforcement.
+  // Source of truth is the payments table; this is a fast-read cache.
+  hasPaid      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  projects BotProject[]
+  payments Payment[]
+}
+
+// Template model kept for future DB-backed template management.
+// Templates are currently code-defined in packages/templates — no rows needed yet.
+model Template {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  isPaid      Boolean  @default(false)
+  priceUsd    Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model BotProject {
+  id          String        @id @default(cuid())
+  userId      String
+  templateKey String?       // key from the code registry, e.g. "lead-capture-bot"
+  name        String
+  status      ProjectStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id])
+  config           BotConfig?
+  secret           BotSecret?
+  deployments      DeploymentJob[]
+  generatedVersion GeneratedVersion?
+}
+
+model BotConfig {
+  id          String    @id @default(cuid())
+  projectId   String    @unique
+  configData  Json      // non-sensitive config values only (e.g. welcomeMessage, collectName)
+  validatedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project BotProject @relation(fields: [projectId], references: [id])
+}
+
+// Stores the sensitive fields listed in the template's envMapping (e.g. botToken, ownerChatId).
+// Kept separate from BotConfig so secrets are never returned to the frontend.
+// The deploy worker merges these with BotConfig at runtime to build the .env file.
+model BotSecret {
+  id          String   @id @default(cuid())
+  projectId   String   @unique
+  secretData  Json     // { fieldName: value } — only fields in envMapping
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project BotProject @relation(fields: [projectId], references: [id])
+}
+
+// Stores the deterministic source snapshot produced by the generator.
+// sourceJson contains rendered source files — NO raw secrets.
+// Secrets are injected at deploy time from BotConfig.
+model GeneratedVersion {
+  id            String   @id @default(cuid())
+  projectId     String   @unique   // one active snapshot per project (upserted on re-generate)
+  versionNumber Int      @default(1)
+  templateKey   String
+  // { files: {path,content}[], envVars: string[], envMapping: Record<string,string>, generatedAt: string }
+  sourceJson    Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project BotProject @relation(fields: [projectId], references: [id])
+}
+
+// User-level payment — one confirmed payment unlocks generate + deploy for all
+// of a user's projects. Multiple records allowed per user (each checkout attempt
+// creates one); enforcement reads User.hasPaid (set true by webhook on success).
+model Payment {
+  id                    String        @id @default(cuid())
+  userId                String
+  stripeSessionId       String        @unique
+  stripePaymentIntentId String?
+  // Stripe webhook event ID — used as the primary idempotency key.
+  // A second delivery of the same event is detected and skipped immediately.
+  // Nullable to preserve existing rows that predate this field.
+  stripeEventId         String?       @unique
+  amountCents           Int
+  currency              String        @default("usd")
+  status                PaymentStatus @default(PENDING)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// Audit trail — important user and system actions.
+// Intentionally simple: no FK constraints so records survive entity deletion.
+// Never store secrets, tokens, or raw config values in metadata.
+model AuditEvent {
+  id          String   @id @default(cuid())
+  actorUserId String?  // null for system / webhook-initiated events
+  eventType   String   // see AuditEventType constants in audit.service.ts
+  entityType  String   // "user", "project", "payment", "system"
+  entityId    String
+  metadata    Json?    // safe, non-secret context (IDs, status codes, counts)
+  createdAt   DateTime @default(now())
+
+  @@index([entityId])
+  @@index([actorUserId])
+  @@index([createdAt])
+}
+
+// One row per deploy attempt. Multiple allowed per project (history).
+model DeploymentJob {
+  id            String    @id @default(cuid())
+  projectId     String
+  bullJobId     String?                  // BullMQ job ID for tracking
+  pm2Name       String?                  // "bot-{projectId}" — PM2 process name
+  workspacePath String?                  // absolute path to the bot workspace on VPS
+  status        JobStatus @default(QUEUED)
+  logs          String?                  // last captured stdout/stderr (truncated)
+  errorMsg      String?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  project BotProject @relation(fields: [projectId], references: [id])
+}
