@@ -132,6 +132,31 @@ export class ProjectsService {
     }
   }
 
+  // PATCH /projects/:id — rename project
+  async rename(id: string, userId: string, name: string) {
+    await this.findOneByUser(id, userId)
+    return this.prisma.botProject.update({
+      where: { id },
+      data: { name },
+    })
+  }
+
+  // DELETE /projects/:id — delete project and all related data
+  async remove(id: string, userId: string) {
+    await this.findOneByUser(id, userId)
+
+    // Delete in correct order (foreign key constraints)
+    await this.prisma.$transaction([
+      this.prisma.deploymentJob.deleteMany({ where: { projectId: id } }),
+      this.prisma.generatedVersion.deleteMany({ where: { projectId: id } }),
+      this.prisma.botSecret.deleteMany({ where: { projectId: id } }),
+      this.prisma.botConfig.deleteMany({ where: { projectId: id } }),
+      this.prisma.botProject.delete({ where: { id } }),
+    ])
+
+    return { deleted: true }
+  }
+
   // PATCH /projects/:id/template
   async assignTemplate(id: string, userId: string, dto: AssignTemplateDto) {
     await this.findOneByUser(id, userId)

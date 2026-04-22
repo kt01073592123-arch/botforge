@@ -108,3 +108,16 @@ export function saveProjectConfig(
     body: JSON.stringify({ config }),
   })
 }
+
+export function renameProject(projectId: string, name: string): Promise<Project> {
+  return apiFetch<Project>(`/projects/${projectId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name }),
+  })
+}
+
+export function deleteProject(projectId: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(`/projects/${projectId}`, {
+    method: 'DELETE',
+  })
+}

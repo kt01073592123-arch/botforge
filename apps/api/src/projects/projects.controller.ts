@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -48,6 +49,23 @@ export class ProjectsController {
   @Get(':id/overview')
   getOverview(@Param('id') id: string, @CurrentUser() user: SafeUser) {
     return this.projectsService.getOverview(id, user.id)
+  }
+
+  // PATCH /api/v1/projects/:id — rename
+  @Patch(':id')
+  rename(
+    @Param('id') id: string,
+    @Body() body: { name: string },
+    @CurrentUser() user: SafeUser,
+  ) {
+    return this.projectsService.rename(id, user.id, body.name)
+  }
+
+  // DELETE /api/v1/projects/:id
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  remove(@Param('id') id: string, @CurrentUser() user: SafeUser) {
+    return this.projectsService.remove(id, user.id)
   }
 
   // PATCH /api/v1/projects/:id/template

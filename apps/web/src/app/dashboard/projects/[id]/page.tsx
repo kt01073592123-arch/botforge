@@ -468,7 +468,7 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Bot actions (stop) */}
-        <BotActions projectId={overview.id} status={overview.status} onAction={loadOverview} />
+        <BotActions projectId={overview.id} projectName={overview.name} status={overview.status} onAction={loadOverview} />
 
       </div>
     </main>
