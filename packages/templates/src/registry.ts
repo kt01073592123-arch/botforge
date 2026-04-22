@@ -3,6 +3,7 @@ import { leadCaptureBotTemplate } from './lead-capture-bot'
 import { orderBotTemplate } from './order-bot'
 import { bookingBotTemplate } from './booking-bot'
 import { supportBotTemplate } from './support-bot'
+import { shopBotTemplate } from './shop-bot'
 
 // ── Registry ──────────────────────────────────────────────────────────────────
 // Add new templates here as they are built. Key must match template.metadata.key.
@@ -12,6 +13,7 @@ const REGISTRY: Record<string, TemplateDef> = {
   'order-bot': orderBotTemplate,
   'booking-bot': bookingBotTemplate,
   'support-bot': supportBotTemplate,
+  'shop-bot': shopBotTemplate,
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
