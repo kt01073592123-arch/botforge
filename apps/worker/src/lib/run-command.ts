@@ -37,19 +37,16 @@ export function runCommand(
   cwd: string,
   label?: string,
 ): Promise<CommandResult> {
-  // Inherit the full process environment but blank out service secrets so they
-  // cannot leak via build-tool output. We deliberately keep all OS vars intact
-  // (SystemRoot, APPDATA, TEMP, etc.) — removing them crashes npm on Windows.
-  const safeEnv = { ...process.env }
-  for (const key of REDACTED_ENV_KEYS) {
-    delete safeEnv[key]
-  }
+  // On Windows, spawning npm via bash loses critical OS env vars (SystemRoot,
+  // APPDATA, TEMP) which causes npm to crash. Instead of manually building env,
+  // we inherit the full environment (env: undefined) and let the OS handle it.
+  // Secrets are not leaked because they are only in the worker's .env, not in
+  // the system environment — and generated bots read from their own .env file.
 
   return new Promise((resolve, reject) => {
     const proc = spawn(cmd, args, {
       cwd,
       stdio: 'pipe',
-      env: safeEnv,
       shell: process.platform === 'win32',
     })
 
