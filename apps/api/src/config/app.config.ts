@@ -40,6 +40,7 @@ export default registerAs('app', () => ({
   // REQUIRED — service will refuse to start without it if secrets are present.
   secretEncryptionKey: process.env.BOT_SECRET_ENCRYPTION_KEY ?? '',
 
-  // Google Gemini API key for AI-powered bot configuration (free)
+  // AI API keys
   geminiApiKey: process.env.GEMINI_API_KEY ?? '',
+  openaiApiKey: process.env.OPENAI_API_KEY ?? '',
 }))

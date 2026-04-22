@@ -24,6 +24,10 @@ export default function NewProjectPage() {
   const [prompt, setPrompt] = useState('')
   const [error, setError] = useState('')
 
+  // AI settings
+  const [aiProvider, setAiProvider] = useState<'openai' | 'gemini'>('gemini')
+  const [aiApiKey, setAiApiKey] = useState('')
+
   // AI result
   const [templateKey, setTemplateKey] = useState('')
   const [templateName, setTemplateName] = useState('')
@@ -38,12 +42,12 @@ export default function NewProjectPage() {
   const [projectId, setProjectId] = useState('')
 
   async function handleGenerate() {
-    if (!prompt.trim()) return
+    if (!prompt.trim() || !aiApiKey.trim()) return
     setError('')
     setStep('loading')
 
     try {
-      const result = await generateConfigFromPrompt(prompt)
+      const result = await generateConfigFromPrompt(prompt, aiProvider, aiApiKey)
       setTemplateKey(result.templateKey)
       setTemplateName(result.templateName)
       setConfig(result.config)
@@ -60,21 +64,16 @@ export default function NewProjectPage() {
       setError('Bot token va Chat ID kiritish shart')
       return
     }
-
     setError('')
     setStep('generating')
 
     try {
-      // 1. Create project
       const botName = (config.welcomeMessage as string)?.slice(0, 30) || templateName
       const project = await createProject({ name: botName })
       setProjectId(project.id)
 
-      // 2. Apply AI config with tokens
       const fullConfig = { ...config, botToken: botToken.trim(), ownerChatId: ownerChatId.trim() }
       await applyAIConfig(project.id, templateKey, fullConfig)
-
-      // 3. Generate bot
       await generateProject(project.id)
 
       setStep('done')
@@ -90,7 +89,7 @@ export default function NewProjectPage() {
         ← Mening botlarim
       </Link>
 
-      {/* ── Step 1: Prompt ────────────────────────────────────────────── */}
+      {/* ── Step 1: Prompt + AI key ──────────────────────────────────── */}
       {step === 'prompt' && (
         <div className="rounded-xl border border-gray-200 bg-white p-8">
           <h1 className="mb-2 text-2xl font-bold text-gray-900">Yangi bot yaratish</h1>
@@ -102,6 +101,38 @@ export default function NewProjectPage() {
             <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
           )}
 
+          {/* AI Provider & Key */}
+          <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50/50 p-4">
+            <p className="mb-3 text-xs font-semibold text-indigo-700">AI sozlamalari</p>
+            <div className="mb-3 flex gap-2">
+              <button
+                onClick={() => setAiProvider('gemini')}
+                className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${aiProvider === 'gemini' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+              >
+                Google Gemini (bepul)
+              </button>
+              <button
+                onClick={() => setAiProvider('openai')}
+                className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${aiProvider === 'openai' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+              >
+                OpenAI (ChatGPT)
+              </button>
+            </div>
+            <input
+              type="password"
+              value={aiApiKey}
+              onChange={(e) => setAiApiKey(e.target.value)}
+              placeholder={aiProvider === 'gemini' ? 'AIza... (aistudio.google.com/apikey)' : 'sk-... (platform.openai.com/api-keys)'}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            />
+            <p className="mt-1.5 text-[10px] text-gray-400">
+              {aiProvider === 'gemini'
+                ? 'Bepul kalit: aistudio.google.com/apikey'
+                : 'Kalit: platform.openai.com/api-keys'}
+            </p>
+          </div>
+
+          {/* Prompt */}
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -113,7 +144,7 @@ export default function NewProjectPage() {
 
           <button
             onClick={handleGenerate}
-            disabled={!prompt.trim() || prompt.trim().length < 10}
+            disabled={!prompt.trim() || prompt.trim().length < 10 || !aiApiKey.trim()}
             className="w-full rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             AI bilan bot yaratish
@@ -159,9 +190,7 @@ export default function NewProjectPage() {
           <div className="rounded-xl border border-gray-200 bg-white p-6">
             <div className="mb-4 flex items-center gap-3">
               <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700">{templateName}</span>
-              <span className="text-xs text-gray-400">{templateKey}</span>
             </div>
-
             <h3 className="mb-3 text-sm font-semibold text-gray-700">Sozlamalar:</h3>
             <div className="space-y-2">
               {Object.entries(config).filter(([k]) => k !== 'botToken' && k !== 'ownerChatId').map(([key, val]) => (
@@ -173,21 +202,11 @@ export default function NewProjectPage() {
             </div>
           </div>
 
-          {error && (
-            <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-          )}
-
           <div className="flex gap-3">
-            <button
-              onClick={() => setStep('tokens')}
-              className="flex-1 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
-            >
+            <button onClick={() => setStep('tokens')} className="flex-1 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500">
               Davom etish →
             </button>
-            <button
-              onClick={() => { setStep('prompt'); setError('') }}
-              className="rounded-lg border border-gray-200 px-5 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
-            >
+            <button onClick={() => { setStep('prompt'); setError('') }} className="rounded-lg border border-gray-200 px-5 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50">
               Qayta yozish
             </button>
           </div>
@@ -195,7 +214,7 @@ export default function NewProjectPage() {
       )}
 
       {/* ── Step 4: Token inputs ──────────────────────────────────────── */}
-      {(step === 'tokens') && (
+      {step === 'tokens' && (
         <div className="rounded-xl border border-gray-200 bg-white p-8">
           <h2 className="mb-2 text-lg font-bold text-gray-900">Bot tokenlarini kiriting</h2>
           <p className="mb-6 text-sm text-gray-500">
@@ -210,40 +229,23 @@ export default function NewProjectPage() {
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">Bot Token *</label>
               <p className="mb-1.5 text-xs text-gray-500">@BotFather da /newbot buyrug&apos;i bilan oling</p>
-              <input
-                type="password"
-                value={botToken}
-                onChange={(e) => setBotToken(e.target.value)}
-                placeholder="123456789:AAH..."
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              />
+              <input type="password" value={botToken} onChange={(e) => setBotToken(e.target.value)} placeholder="123456789:AAH..."
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
             </div>
-
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">Admin Chat ID *</label>
               <p className="mb-1.5 text-xs text-gray-500">@userinfobot dan o&apos;zingizning ID ni bilib oling</p>
-              <input
-                type="text"
-                value={ownerChatId}
-                onChange={(e) => setOwnerChatId(e.target.value)}
-                placeholder="5534263450"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              />
+              <input type="text" value={ownerChatId} onChange={(e) => setOwnerChatId(e.target.value)} placeholder="5534263450"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
             </div>
           </div>
 
           <div className="mt-6 flex gap-3">
-            <button
-              onClick={handleApply}
-              disabled={!botToken.trim() || !ownerChatId.trim()}
-              className="flex-1 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-50"
-            >
+            <button onClick={handleApply} disabled={!botToken.trim() || !ownerChatId.trim()}
+              className="flex-1 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-50">
               Bot yaratish
             </button>
-            <button
-              onClick={() => setStep('preview')}
-              className="rounded-lg border border-gray-200 px-5 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50"
-            >
+            <button onClick={() => setStep('preview')} className="rounded-lg border border-gray-200 px-5 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50">
               Orqaga
             </button>
           </div>
@@ -255,7 +257,6 @@ export default function NewProjectPage() {
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
           <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
           <p className="text-sm font-medium text-gray-700">Bot yaratilmoqda...</p>
-          <p className="mt-1 text-xs text-gray-400">Shablon, config va kod generatsiya qilinmoqda</p>
         </div>
       )}
 
@@ -264,13 +265,9 @@ export default function NewProjectPage() {
         <div className="rounded-xl border border-green-200 bg-green-50 p-8 text-center">
           <div className="mb-3 text-4xl">🎉</div>
           <h2 className="mb-2 text-xl font-bold text-green-800">Bot tayyor!</h2>
-          <p className="mb-6 text-sm text-green-700">
-            Bot kodi yaratildi. Endi deploy qilsangiz Telegramda ishlaydi.
-          </p>
-          <button
-            onClick={() => router.push(`/dashboard/projects/${projectId}`)}
-            className="rounded-lg bg-indigo-600 px-8 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
-          >
+          <p className="mb-6 text-sm text-green-700">Bot kodi yaratildi. Endi deploy qiling.</p>
+          <button onClick={() => router.push(`/dashboard/projects/${projectId}`)}
+            className="rounded-lg bg-indigo-600 px-8 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500">
             Deploy qilish →
           </button>
         </div>

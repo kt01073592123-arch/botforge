@@ -7,10 +7,14 @@ export interface AIConfigResult {
   explanation: string
 }
 
-export function generateConfigFromPrompt(prompt: string): Promise<AIConfigResult> {
+export function generateConfigFromPrompt(
+  prompt: string,
+  aiProvider: 'openai' | 'gemini',
+  aiApiKey: string,
+): Promise<AIConfigResult> {
   return apiFetch<AIConfigResult>('/ai/generate-config', {
     method: 'POST',
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, aiProvider, aiApiKey }),
   })
 }
 

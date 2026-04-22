@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Post,
-  UseGuards,
-} from '@nestjs/common'
+import { Body, Controller, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common'
 import { Throttle } from '@nestjs/throttler'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { CurrentUser } from '../auth/decorators/current-user.decorator'
@@ -22,17 +14,13 @@ export class AIController {
     private readonly projectsService: ProjectsService,
   ) {}
 
-  // POST /api/v1/ai/generate-config
-  // Takes a prompt, returns template + config suggestion
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('generate-config')
   @HttpCode(HttpStatus.OK)
-  generateConfig(@Body() body: { prompt: string }) {
-    return this.aiService.generateConfigFromPrompt(body.prompt)
+  generateConfig(@Body() body: { prompt: string; aiProvider: 'openai' | 'gemini'; aiApiKey: string }) {
+    return this.aiService.generateConfigFromPrompt(body.prompt, body.aiProvider, body.aiApiKey)
   }
 
-  // POST /api/v1/ai/apply/:projectId
-  // Takes AI result and applies it: assigns template + saves config
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('apply/:projectId')
   @HttpCode(HttpStatus.OK)
@@ -41,16 +29,8 @@ export class AIController {
     @Body() body: { templateKey: string; config: Record<string, unknown> },
     @CurrentUser() user: SafeUser,
   ) {
-    // 1. Assign template
-    await this.projectsService.assignTemplate(projectId, user.id, {
-      templateKey: body.templateKey,
-    })
-
-    // 2. Save config
-    await this.projectsService.saveConfig(projectId, user.id, {
-      config: body.config,
-    })
-
+    await this.projectsService.assignTemplate(projectId, user.id, { templateKey: body.templateKey })
+    await this.projectsService.saveConfig(projectId, user.id, { config: body.config })
     return { applied: true }
   }
 }
