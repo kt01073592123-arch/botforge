@@ -15,6 +15,7 @@ import { GeneratorModule } from './generator/generator.module'
 import { DeployModule } from './deploy/deploy.module'
 import { PaymentsModule } from './payments/payments.module'
 import { AdminModule } from './admin/admin.module'
+import { AIModule } from './ai/ai.module'
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { AdminModule } from './admin/admin.module'
     DeployModule,
     PaymentsModule,
     AdminModule,
+    AIModule,
   ],
   providers: [
     // Global exception filter — normalises all error responses (no stack traces to clients)
