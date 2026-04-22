@@ -4,7 +4,7 @@ import { apiFetch } from './api'
 // Mirror of packages/templates/src/types.ts — duplicated so the frontend
 // doesn't import from the backend package (keeps the bundle clean).
 
-export type ConfigFieldType = 'text' | 'textarea' | 'password' | 'boolean' | 'url'
+export type ConfigFieldType = 'text' | 'textarea' | 'password' | 'boolean' | 'url' | 'number' | 'select'
 
 export interface ConfigField {
   name: string
@@ -14,7 +14,10 @@ export interface ConfigField {
   description?: string
   required: boolean
   maxLength?: number
-  defaultValue?: string | boolean
+  defaultValue?: string | boolean | number
+  options?: Array<{ value: string; label: string }>
+  min?: number
+  max?: number
 }
 
 export interface TemplateMetadata {

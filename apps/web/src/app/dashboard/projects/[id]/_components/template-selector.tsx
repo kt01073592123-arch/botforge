@@ -5,6 +5,15 @@ import { listTemplates, type TemplateMetadata } from '@/lib/templates'
 import { assignTemplate } from '@/lib/projects'
 import { ApiError } from '@/lib/api'
 
+const TEMPLATE_ICONS: Record<string, string> = {
+  'lead-capture-bot': '📬',
+  'order-bot': '🛒',
+  'booking-bot': '📅',
+  'support-bot': '🛟',
+  'faq-bot': '❓',
+  'ai-consultant-bot': '🤖',
+}
+
 interface Props {
   projectId: string
   currentKey: string | null
@@ -75,6 +84,7 @@ export default function TemplateSelector({ projectId, currentKey, onAssigned }: 
                   ✓
                 </span>
               )}
+              <div className="mb-1.5 text-2xl">{TEMPLATE_ICONS[tpl.key] ?? '🤖'}</div>
               <p className="text-sm font-semibold text-gray-900">{tpl.name}</p>
               <p className="mt-1 text-xs text-gray-500 leading-relaxed">{tpl.description}</p>
               <div className="mt-3 flex items-center gap-2">

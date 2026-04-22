@@ -240,6 +240,31 @@ function FieldInput({
           onChange={(e) => onChange(e.target.value)}
           className={inputClass}
         />
+      ) : field.type === 'select' && field.options ? (
+        <select
+          id={field.name}
+          required={field.required}
+          value={(value as string) ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          className={inputClass}
+        >
+          <option value="">Tanlang...</option>
+          {field.options.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      ) : field.type === 'number' ? (
+        <input
+          id={field.name}
+          type="number"
+          required={field.required}
+          min={field.min}
+          max={field.max}
+          placeholder={field.placeholder}
+          value={(value as string) ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          className={inputClass}
+        />
       ) : (
         <input
           id={field.name}
