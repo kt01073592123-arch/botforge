@@ -15,9 +15,12 @@ const ServerEnvSchema = z.object({
     .string()
     .regex(/^[0-9a-fA-F]{64}$/, "ENCRYPTION_KEY 64 hex char (32 bayt) bo‘lishi kerak"),
 
-  // OpenAI
-  OPENAI_API_KEY: z.string().min(10),
-  AI_MODEL: z.string().default("gpt-4o-mini"),
+  // Anthropic Claude (chat uchun)
+  ANTHROPIC_API_KEY: z.string().min(10),
+  AI_MODEL: z.string().default("claude-haiku-4-5"),
+
+  // OpenAI (faqat embeddings/KB uchun ixtiyoriy — Anthropic embedding bermaydi)
+  OPENAI_API_KEY: z.string().optional(),
 
   // Public
   NEXT_PUBLIC_APP_URL: z.string().url(),

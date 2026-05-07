@@ -1,7 +1,7 @@
-// AI Engine — bitta universal funksiya: bot config va suhbat tarixi asosida javob beradi.
-// Tool calls: save_lead, request_human. Boshqa tool kerak bo‘lsa shu joyga qo‘shasan.
+// AI Engine — Anthropic Claude. Tool use (save_lead, request_human) + prompt caching.
 
-import { openai } from "./openai";
+import type Anthropic from "@anthropic-ai/sdk";
+import { anthropic } from "./anthropic";
 import { db } from "../supabase/server";
 import { env } from "../env";
 import { searchKnowledge } from "../kb";
@@ -12,34 +12,28 @@ export type AiAction =
   | { type: "save_lead"; name?: string; phone?: string; request?: string }
   | { type: "request_human"; reason?: string };
 
-const TOOLS = [
+const TOOLS: Anthropic.Tool[] = [
   {
-    type: "function" as const,
-    function: {
-      name: "save_lead",
-      description:
-        "Mijoz aloqa qoldirgan bo‘lsa (ism, telefon yoki aniq talab) shu funksiyani chaqir.",
-      parameters: {
-        type: "object",
-        properties: {
-          name: { type: "string", description: "Mijoz ismi" },
-          phone: { type: "string", description: "Telefon raqami" },
-          request: { type: "string", description: "Mijozning talabi/savoli" },
-        },
+    name: "save_lead",
+    description:
+      "Mijoz aloqa qoldirgan bo‘lsa (ism, telefon yoki aniq talab) shu funksiyani chaqir.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Mijoz ismi" },
+        phone: { type: "string", description: "Telefon raqami" },
+        request: { type: "string", description: "Mijozning talabi/savoli" },
       },
     },
   },
   {
-    type: "function" as const,
-    function: {
-      name: "request_human",
-      description:
-        "Mijoz operator bilan gaplashishni so‘rasa yoki javob bera olmasang shuni chaqir.",
-      parameters: {
-        type: "object",
-        properties: {
-          reason: { type: "string", description: "Nega operator kerak" },
-        },
+    name: "request_human",
+    description:
+      "Mijoz operator bilan gaplashishni so‘rasa yoki javob bera olmasang shuni chaqir.",
+    input_schema: {
+      type: "object",
+      properties: {
+        reason: { type: "string", description: "Nega operator kerak" },
       },
     },
   },
@@ -79,10 +73,29 @@ function buildBusinessContext(bot: BotRow, bd: BotData | null): string {
   return lines.join("\n");
 }
 
+// History’ni Anthropic formatiga aylantirish.
+// 1-xabar `user` bo‘lishi shart. Boshlovchi `assistant` xabarlarni tashlaymiz.
+function toAnthropicMessages(
+  history: Pick<MessageRow, "role" | "content">[]
+): Anthropic.MessageParam[] {
+  const filtered = history
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    }));
+  // Boshidagi assistant xabarlarni olib tashlaymiz
+  while (filtered.length && filtered[0].role !== "user") filtered.shift();
+  return filtered;
+}
+
 export async function generateReply(opts: {
   bot: BotRow;
   history: Pick<MessageRow, "role" | "content">[];
-}): Promise<{ actions: AiAction[]; usage: { prompt: number; completion: number } }> {
+}): Promise<{
+  actions: AiAction[];
+  usage: { prompt: number; completion: number };
+}> {
   const { data: bdRow } = await db()
     .from("bot_data")
     .select("*")
@@ -90,60 +103,73 @@ export async function generateReply(opts: {
     .maybeSingle();
   const bd = bdRow as BotData | null;
 
-  // RAG: oxirgi user xabari asosida tegishli ma'lumot bo‘laklarini topamiz
-  const lastUserMsg = [...opts.history].reverse().find((m) => m.role === "user")?.content ?? "";
-  const kbHits = await searchKnowledge({ botId: opts.bot.id, query: lastUserMsg, limit: 3 });
+  // RAG (KB embeddings) — agar OPENAI_API_KEY o‘rnatilmagan bo‘lsa, kb hits = []
+  const lastUserMsg =
+    [...opts.history].reverse().find((m) => m.role === "user")?.content ?? "";
+  const kbHits = await searchKnowledge({
+    botId: opts.bot.id,
+    query: lastUserMsg,
+    limit: 3,
+  });
   const kbBlock =
     kbHits.length > 0
-      ? `\n\n=== KNOWLEDGE_BASE (relevant) ===\n${kbHits
+      ? `=== KNOWLEDGE_BASE (relevant) ===\n${kbHits
           .map((h, i) => `[${i + 1}] ${h.content}`)
-          .join("\n\n")}\n`
+          .join("\n\n")}`
       : "";
 
-  const system = [
+  // System: barqaror qism (cache qilinadi) + KB qism (har turda o‘zgaradi, cache qilinmaydi)
+  const stableSystem = [
     opts.bot.system_prompt ?? "",
     "\n\n=== BUSINESS_CONTEXT ===\n",
     buildBusinessContext(opts.bot, bd),
-    kbBlock,
   ].join("\n");
 
-  const messages = [
-    { role: "system" as const, content: system },
-    ...opts.history.map((m) => ({
-      role: m.role === "tool" ? ("system" as const) : (m.role as "user" | "assistant" | "system"),
-      content: m.content,
-    })),
+  const systemBlocks: Anthropic.TextBlockParam[] = [
+    {
+      type: "text",
+      text: stableSystem,
+      cache_control: { type: "ephemeral" },
+    },
   ];
+  if (kbBlock) {
+    systemBlocks.push({ type: "text", text: kbBlock });
+  }
 
-  const completion = await openai().chat.completions.create({
-    model: opts.bot.ai_model || env().AI_MODEL,
-    messages,
+  const model = opts.bot.ai_model || env().AI_MODEL;
+
+  const response = await anthropic().messages.create({
+    model,
+    max_tokens: 800,
+    system: systemBlocks,
+    messages: toAnthropicMessages(opts.history),
     tools: TOOLS,
-    tool_choice: "auto",
-    temperature: 0.4,
-    max_tokens: 600,
   });
 
-  const choice = completion.choices[0];
-  const msg = choice.message;
   const actions: AiAction[] = [];
-
-  if (msg.tool_calls?.length) {
-    for (const tc of msg.tool_calls) {
-      try {
-        const args = JSON.parse(tc.function.arguments || "{}");
-        if (tc.function.name === "save_lead") {
-          actions.push({ type: "save_lead", ...args });
-        } else if (tc.function.name === "request_human") {
-          actions.push({ type: "request_human", reason: args.reason });
-        }
-      } catch { /* noto‘g‘ri JSON ni o‘tkazib yuboramiz */ }
+  for (const block of response.content) {
+    if (block.type === "text") {
+      const txt = block.text.trim();
+      if (txt) actions.push({ type: "send", text: txt });
+    } else if (block.type === "tool_use") {
+      const input = block.input as Record<string, unknown>;
+      if (block.name === "save_lead") {
+        actions.push({
+          type: "save_lead",
+          name: input.name as string | undefined,
+          phone: input.phone as string | undefined,
+          request: input.request as string | undefined,
+        });
+      } else if (block.name === "request_human") {
+        actions.push({
+          type: "request_human",
+          reason: input.reason as string | undefined,
+        });
+      }
     }
   }
-  if (msg.content && msg.content.trim()) {
-    actions.push({ type: "send", text: msg.content.trim() });
-  }
-  // Agar AI faqat tool ishlatib hech narsa demagan bo‘lsa, ehtiyot uchun standart javob
+
+  // Agar AI faqat tool ishlatib hech narsa demagan bo‘lsa, qo‘shimcha javob
   if (actions.filter((a) => a.type === "send").length === 0) {
     actions.push({ type: "send", text: "Aniqlashtirib, admin javob beradi 🙏" });
   }
@@ -151,19 +177,28 @@ export async function generateReply(opts: {
   return {
     actions,
     usage: {
-      prompt: completion.usage?.prompt_tokens ?? 0,
-      completion: completion.usage?.completion_tokens ?? 0,
+      prompt:
+        response.usage.input_tokens +
+        (response.usage.cache_creation_input_tokens ?? 0) +
+        (response.usage.cache_read_input_tokens ?? 0),
+      completion: response.usage.output_tokens,
     },
   };
 }
 
-// Narx hisobi (gpt-4o-mini taxminiy: $0.15/M input, $0.60/M output)
-export function estimateCostUsd(model: string, prompt: number, completion: number): number {
+// Anthropic narxlari ($/1M token). Cache read ~10% input narxi, lekin biz o‘rtacha hisoblaymiz.
+// https://www.anthropic.com/pricing
+export function estimateCostUsd(
+  model: string,
+  prompt: number,
+  completion: number
+): number {
   const rates: Record<string, [number, number]> = {
-    "gpt-4o-mini": [0.15 / 1_000_000, 0.6 / 1_000_000],
-    "gpt-4o":      [2.5 / 1_000_000, 10 / 1_000_000],
-    "gpt-4.1-mini": [0.4 / 1_000_000, 1.6 / 1_000_000],
+    "claude-haiku-4-5": [1 / 1_000_000, 5 / 1_000_000],
+    "claude-sonnet-4-6": [3 / 1_000_000, 15 / 1_000_000],
+    "claude-opus-4-7": [5 / 1_000_000, 25 / 1_000_000],
+    "claude-opus-4-6": [5 / 1_000_000, 25 / 1_000_000],
   };
-  const [pi, po] = rates[model] ?? rates["gpt-4o-mini"];
+  const [pi, po] = rates[model] ?? rates["claude-haiku-4-5"];
   return prompt * pi + completion * po;
 }

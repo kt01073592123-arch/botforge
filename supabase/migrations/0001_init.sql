@@ -57,8 +57,8 @@ create table if not exists public.bots (
   tg_username text,
   tg_first_name text,
   webhook_secret text,
-  -- AI configi
-  ai_model text default 'gpt-4o-mini',
+  -- AI configi (Claude default)
+  ai_model text default 'claude-haiku-4-5',
   system_prompt text,
   welcome_message text,
   admin_chat_id bigint,

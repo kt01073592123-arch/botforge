@@ -1,7 +1,8 @@
 // Knowledge base helpers — document yaratish va chunklash + embedding.
+// OpenAI key bo‘lmasa hujjatlar saqlanadi, lekin embedding va qidiruv ishlamaydi.
 
 import { db } from "./supabase/server";
-import { embed, embedOne, chunkText } from "./ai/embeddings";
+import { embed, embedOne, chunkText, isEmbeddingAvailable } from "./ai/embeddings";
 
 export async function createKbDocument(opts: {
   botId: string;
@@ -22,7 +23,7 @@ export async function createKbDocument(opts: {
     })
     .select("*")
     .single();
-  if (error) throw new Error(error.message);
+  if (error || !doc) throw new Error(error?.message ?? "kb insert failed");
 
   try {
     const chunks = chunkText(opts.content);
@@ -30,7 +31,28 @@ export async function createKbDocument(opts: {
       await sb.from("kb_documents").update({ status: "ready" }).eq("id", doc.id);
       return doc;
     }
-    // Batchda embed qilamiz (OpenAI 100 ta inputgacha qabul qiladi)
+
+    if (!isEmbeddingAvailable()) {
+      // Embedding xizmati ulanmagan — chunklarni embeddingsiz saqlaymiz, qidiruv ishlamaydi
+      const rows = chunks.map((content, ord) => ({
+        bot_id: opts.botId,
+        document_id: doc.id,
+        ord,
+        content,
+        embedding: null,
+      }));
+      await sb.from("kb_chunks").insert(rows);
+      await sb
+        .from("kb_documents")
+        .update({
+          status: "ready",
+          error: "Embedding xizmati ulanmagan — qidiruv ishlamaydi",
+        })
+        .eq("id", doc.id);
+      return { ...doc, chunks: chunks.length };
+    }
+
+    // Batchda embed qilamiz
     const embeddings: number[][] = [];
     const BATCH = 50;
     for (let i = 0; i < chunks.length; i += BATCH) {
@@ -39,7 +61,6 @@ export async function createKbDocument(opts: {
       embeddings.push(...vectors);
     }
 
-    // pgvector format: '[0.1,0.2,...]'
     const rows = chunks.map((content, ord) => ({
       bot_id: opts.botId,
       document_id: doc.id,
@@ -87,12 +108,14 @@ export async function searchKnowledge(opts: {
   minSimilarity?: number;
 }): Promise<{ content: string; similarity: number }[]> {
   if (!opts.query.trim()) return [];
+  if (!isEmbeddingAvailable()) return [];
   let v: number[];
   try {
     v = await embedOne(opts.query);
   } catch {
     return [];
   }
+  if (!v.length) return [];
   const { data, error } = await db().rpc("kb_match", {
     p_bot_id: opts.botId,
     p_query: `[${v.join(",")}]`,

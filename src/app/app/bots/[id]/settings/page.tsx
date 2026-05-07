@@ -116,9 +116,9 @@ export default function SettingsPage() {
             value={bot.ai_model}
             onChange={(e) => setBot({ ...bot, ai_model: e.target.value })}
           >
-            <option value="gpt-4o-mini">gpt-4o-mini (arzon, tez)</option>
-            <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-            <option value="gpt-4o">gpt-4o (kuchli)</option>
+            <option value="claude-haiku-4-5">Claude Haiku 4.5 (arzon, tez)</option>
+            <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (yaxshi balans)</option>
+            <option value="claude-opus-4-7">Claude Opus 4.7 (eng kuchli)</option>
           </select>
         </Field>
 
