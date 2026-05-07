@@ -32,12 +32,24 @@ Sizda 2 ta active free Supabase loyiha bor (`myauto`, `unvermarket`) va limit 2.
 
 ## 2) Migration’larni qo‘llash
 
-Supabase Dashboard → SQL Editor’da quyidagi 4 ta faylni **shu tartibda** yopishtirib, har birini ishga tushiring:
+Supabase Dashboard → SQL Editor’da quyidagi **11 ta** faylni **shu tartibda** yopishtirib, har birini ishga tushiring:
 
-1. `supabase/migrations/0001_init.sql` — schema
-2. `supabase/migrations/0002_rls.sql` — RLS policies
-3. `supabase/migrations/0003_seed_templates.sql` — 3 ta template
-4. `supabase/migrations/0004_rpc.sql` — RPC funksiyalari
+1. `0001_init.sql` — schema
+2. `0002_rls.sql` — RLS policies
+3. `0003_seed_templates.sql` — 3 ta template
+4. `0004_rpc.sql` — RPC funksiyalari
+5. `0005_rate_limit.sql` — rate limiting
+6. `0006_monthly_reset.sql` — pg_cron oylik reset
+7. `0007_knowledge.sql` — pgvector + knowledge base (avval `vector` extension yoqing!)
+8. `0008_billing.sql` — tariflar va to‘lovlar
+9. `0009_broadcast.sql` — xabar tarqatish queue
+10. `0010_analytics.sql` — kunlik agregat
+11. `0011_broadcast_cron.sql` — pg_cron broadcast tick (avval `pg_net` extension yoqing!)
+
+> **Extensions yoqish:** Database → Extensions → quyidagilarni qidirib `Enable` bosing:
+> - `pg_cron` (oylik reset uchun)
+> - `vector` (knowledge base uchun)
+> - `pg_net` (broadcast cron uchun)
 
 Tekshirish uchun: **Database → Tables**’da `bots`, `bot_templates`, `conversations`, `messages` va boshqalar ko‘rinishi kerak.
 
@@ -177,16 +189,29 @@ supabase/migrations/     # SQL fayllar (1, 2, 3, 4)
 
 ---
 
-## Keyingi qadamlar (MVP 2 dan)
+## v1.0 da qo‘shilgan qo‘shimcha funksiyalar
 
-- [ ] Knowledge base (PDF/DOCX yuklash + RAG)
-- [ ] Broadcast jo‘natish
-- [ ] Tariflar va to‘lov (Stripe yoki Click)
-- [ ] CRM ko‘rinishi
-- [ ] Operator chat (admin webapp ichidan to‘g‘ridan to‘g‘ri javob beradi)
+- ✅ **Rate limiting** — bot uchun 30 sek/10 xabar, auth uchun IP-based
+- ✅ **Error alert** — bot egasiga Telegram’da xato xabari (30 daq cooldown)
+- ✅ **Onboarding** — bo‘sh dashboard 3 qadamli yo‘l xaritasi bilan
+- ✅ **Operator chat** — dashboard ichidan mijozga javob (AI ni to‘xtatib)
+- ✅ **Lead status** — new/contacted/converted/lost o‘tkazish, filtr
+- ✅ **Inline buttons** — “Operator”, “Boshidan” callback tugmalari
+- ✅ **Knowledge base** — TXT/MD yuklash → embed → RAG javob
+- ✅ **Tariflar** — Free/Start/Pro/Max + Click webhook (prepare/complete)
+- ✅ **Broadcast** — segmentli, throttled (25/daq), retry, cancel
+- ✅ **Analytics** — 7/30/90 kun grafiklari, konversiya
+- ✅ **i18n** — uz/ru/en, til o‘zgartirgich
+- ✅ **Landing** — to‘liq marketing sahifa, narxlar, demo CTA
+
+## v2 da bo‘ladigan ishlar
+
 - [ ] Visual flow builder
-- [ ] Rest. + Salon + Auto + Course template’lar
+- [ ] PDF/DOCX yuklash (hozir TXT/MD)
+- [ ] Restaurant + Booking + Auto + Course template’lar
 - [ ] Marketplace
+- [ ] Email/SMS notifikatsiya
+- [ ] White-label (Max tarif uchun)
 
 ---
 
