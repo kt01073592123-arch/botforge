@@ -6,6 +6,7 @@ import { encryptToken, decryptToken, maskToken } from "./encryption";
 import { TgBot, TelegramApiError } from "./telegram";
 import { env } from "./env";
 import { canCreateBot } from "./billing";
+import { resolveConfig, type Pack, type WizardChoices } from "./template_packs";
 import type { BotRow, BotData, BotTemplateRow } from "./supabase/types";
 
 export async function listBots(ownerId: string): Promise<BotRow[]> {
@@ -46,6 +47,10 @@ export async function createBot(opts: {
   name: string;
   businessName?: string;
   language?: string;
+  // Wizard tanlovlari (pack uchun)
+  subTypeId?: string;
+  tierId?: string;
+  toneId?: string;
 }): Promise<BotRow> {
   const sb = db();
 
@@ -63,6 +68,25 @@ export async function createBot(opts: {
   if (tErr) throw new Error(tErr.message);
   if (!tmpl) throw new Error("Template topilmadi");
 
+  const pack = tmpl as Pack;
+  const choices: WizardChoices = {
+    sub_type_id: opts.subTypeId,
+    tier_id: opts.tierId,
+    tone_id: opts.toneId,
+  };
+  const resolved = pack.is_pack
+    ? resolveConfig(pack, choices)
+    : {
+        system_prompt: pack.default_system_prompt,
+        welcome_message: pack.default_welcome,
+        buttons: pack.default_buttons,
+        services: [],
+        faq: [],
+        working_hours: {},
+        contacts: {},
+        business_type: null,
+      };
+
   const { data, error } = await sb
     .from("bots")
     .insert({
@@ -70,19 +94,26 @@ export async function createBot(opts: {
       template_id: opts.templateId,
       name: opts.name,
       business_name: opts.businessName ?? null,
+      business_type: resolved.business_type,
       language: opts.language ?? "uz",
       status: "draft",
       ai_model: env().AI_MODEL,
-      system_prompt: tmpl.default_system_prompt,
-      welcome_message: tmpl.default_welcome,
+      system_prompt: resolved.system_prompt,
+      welcome_message: resolved.welcome_message,
       webhook_secret: randomBytes(24).toString("hex"),
     })
     .select("*")
     .single();
-  if (error) throw new Error(error.message);
+  if (error || !data) throw new Error(error?.message ?? "create failed");
 
-  // Empty bot_data row
-  await sb.from("bot_data").insert({ bot_id: data.id });
+  // bot_data ga packdan ko‘chirilgan ma’lumot
+  await sb.from("bot_data").insert({
+    bot_id: data.id,
+    services: resolved.services,
+    faq: resolved.faq,
+    working_hours: resolved.working_hours,
+    contacts: resolved.contacts,
+  });
 
   return data as BotRow;
 }

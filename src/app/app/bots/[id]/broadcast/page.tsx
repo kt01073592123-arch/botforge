@@ -5,6 +5,12 @@ import { useParams } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import clsx from "clsx";
 
+type SampleBroadcast = {
+  title: string;
+  text: string;
+  suggested_segment: "all" | "leads" | "converted" | "no_lead";
+};
+
 type Bcast = {
   id: string;
   text: string;
@@ -26,6 +32,7 @@ const SEGMENTS = [
 export default function BroadcastPage() {
   const { id } = useParams<{ id: string }>();
   const [items, setItems] = useState<Bcast[]>([]);
+  const [samples, setSamples] = useState<SampleBroadcast[]>([]);
   const [text, setText] = useState("");
   const [segment, setSegment] = useState<Bcast["segment"]>("all");
   const [busy, setBusy] = useState(false);
@@ -33,6 +40,9 @@ export default function BroadcastPage() {
 
   useEffect(() => {
     load();
+    fetch(`/api/bots/${id}/broadcast/templates`)
+      .then((r) => r.json())
+      .then((d) => setSamples(d.samples ?? []));
     const t = setInterval(load, 5000);
     return () => clearInterval(t);
   }, [id]);
@@ -40,6 +50,13 @@ export default function BroadcastPage() {
   async function load() {
     const d = await fetch(`/api/bots/${id}/broadcast`).then((r) => r.json());
     setItems(d.broadcasts ?? []);
+  }
+
+  function applySample(s: SampleBroadcast) {
+    setText(s.text);
+    setSegment(s.suggested_segment);
+    // Form ga scroll
+    document.getElementById("bc-form")?.scrollIntoView({ behavior: "smooth" });
   }
 
   async function send() {
@@ -79,7 +96,39 @@ export default function BroadcastPage() {
           (Telegram limit).
         </div>
 
-        <div className="panel p-4 space-y-3">
+        {/* Tayyor namunalar (template’dan) */}
+        {samples.length > 0 && (
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted mb-2">
+              ✨ Tayyor namunalar
+            </h2>
+            <p className="text-xs text-muted mb-3">
+              Bossangiz forma to‘ldiriladi — tahrir qilib yuboring
+            </p>
+            <div className="grid gap-2">
+              {samples.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => applySample(s)}
+                  className="panel p-3 text-left hover:border-accent transition"
+                >
+                  <div className="text-sm font-semibold mb-1">{s.title}</div>
+                  <div className="text-xs text-muted leading-snug whitespace-pre-wrap line-clamp-3">
+                    {s.text}
+                  </div>
+                  <div className="text-[10px] text-accent mt-1.5 uppercase tracking-wider">
+                    {s.suggested_segment === "all" && "Barchaga"}
+                    {s.suggested_segment === "leads" && "Lead bergan"}
+                    {s.suggested_segment === "converted" && "Mijoz bo‘lganlar"}
+                    {s.suggested_segment === "no_lead" && "Lead bermaganlar"}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div id="bc-form" className="panel p-4 space-y-3">
           <div>
             <label className="label">Kim ko‘rishini tanlang</label>
             <div className="grid grid-cols-2 gap-2">

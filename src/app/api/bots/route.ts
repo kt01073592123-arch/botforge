@@ -21,6 +21,10 @@ const CreateBody = z.object({
   name: z.string().min(2).max(80),
   businessName: z.string().max(120).optional(),
   language: z.enum(["uz", "ru", "en"]).default("uz"),
+  // Wizard tanlovlari (pack uchun)
+  subTypeId: z.string().optional(),
+  tierId: z.string().optional(),
+  toneId: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -33,6 +37,9 @@ export async function POST(req: Request) {
       name: body.name,
       businessName: body.businessName,
       language: body.language,
+      subTypeId: body.subTypeId,
+      tierId: body.tierId,
+      toneId: body.toneId,
     });
     return NextResponse.json({ bot });
   } catch (e) {

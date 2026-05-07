@@ -16,18 +16,35 @@ type Stats = {
   cost_usd_30d: number;
 };
 
+type BrandKit = {
+  primary_color?: string;
+  accent_color?: string;
+  gradient?: string;
+  text_on_primary?: string;
+  emoji_set?: string[];
+};
+
 export default function BotDetailPage() {
   const { id } = useParams<{ id: string }>();
   const r = useRouter();
   const [bot, setBot] = useState<BotRow | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     refresh();
     fetch(`/api/bots/${id}/stats`).then((r) => r.json()).then((d) => setStats(d.stats));
   }, [id]);
+
+  // Bot’ning template’idagi brand_kit ni olamiz
+  useEffect(() => {
+    if (!bot?.template_id) return;
+    fetch(`/api/templates/${bot.template_id}`)
+      .then((r) => r.json())
+      .then((d) => setBrandKit(d.pack?.brand_kit ?? null));
+  }, [bot?.template_id]);
 
   async function refresh() {
     const d = await fetch(`/api/bots/${id}`).then((r) => r.json());
@@ -73,21 +90,60 @@ export default function BotDetailPage() {
     );
   }
 
+  const headerGradient =
+    brandKit?.gradient ??
+    (brandKit?.primary_color && brandKit?.accent_color
+      ? `linear-gradient(135deg, ${brandKit.primary_color} 0%, ${brandKit.accent_color} 100%)`
+      : null);
+
   return (
     <div>
       <Topbar title={bot.name} back="/app/bots" right={<StatusBadge status={bot.status} />} />
       <div className="max-w-3xl mx-auto px-4 py-4 space-y-4">
-        <div className="panel p-4">
+        {/* Brand kit bilan biznes header */}
+        {headerGradient ? (
+          <div
+            className="rounded-2xl p-4 flex items-center gap-3"
+            style={{ background: headerGradient, color: brandKit?.text_on_primary ?? "white" }}
+          >
+            <div className="text-3xl">{(brandKit?.emoji_set ?? ["🤖"])[0]}</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold truncate">{bot.business_name ?? bot.name}</div>
+              {bot.tg_username ? (
+                <a
+                  href={`https://t.me/${bot.tg_username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs opacity-90 underline"
+                >
+                  @{bot.tg_username}
+                </a>
+              ) : (
+                <Link
+                  href={`/app/bots/${id}/connect`}
+                  className="text-xs opacity-90 underline"
+                >
+                  Token ulash →
+                </Link>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="panel p-4">
+            <div className="text-sm text-muted">{bot.business_name ?? "—"}</div>
+            {bot.tg_username ? (
+              <a href={`https://t.me/${bot.tg_username}`} target="_blank" rel="noopener noreferrer" className="text-accent text-sm">
+                @{bot.tg_username} →
+              </a>
+            ) : (
+              <Link href={`/app/bots/${id}/connect`} className="text-accent text-sm">
+                Token ulash →
+              </Link>
+            )}
+          </div>
+        )}
+        <div className="panel p-4 hidden">
           <div className="text-sm text-muted">{bot.business_name ?? "—"}</div>
-          {bot.tg_username ? (
-            <a href={`https://t.me/${bot.tg_username}`} target="_blank" rel="noopener noreferrer" className="text-accent text-sm">
-              @{bot.tg_username} →
-            </a>
-          ) : (
-            <Link href={`/app/bots/${id}/connect`} className="text-accent text-sm">
-              Token ulash →
-            </Link>
-          )}
           {token && <div className="text-xs text-muted mt-2 font-mono">{token}</div>}
         </div>
 
