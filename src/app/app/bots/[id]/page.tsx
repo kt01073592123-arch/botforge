@@ -161,6 +161,7 @@ export default function BotDetailPage() {
 
         <div className="grid grid-cols-2 gap-2">
           <NavCard href={`/app/bots/${id}/services`} icon="📋" title="Xizmatlar va narxlar" />
+          <NavCard href={`/app/bots/${id}/import`} icon="📥" title="Avtomatik to‘ldirish" />
           <NavCard href={`/app/bots/${id}/kb`} icon="📚" title="Bilim bazasi" />
           <NavCard href={`/app/bots/${id}/conversations`} icon="💬" title="Suhbatlar" />
           <NavCard href={`/app/bots/${id}/leads`} icon="📞" title="Leadlar" />
