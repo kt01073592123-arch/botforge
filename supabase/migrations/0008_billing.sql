@@ -1,11 +1,11 @@
 -- Tariflar va to‘lovlar.
 
 create table if not exists public.plans (
-  id text primary key,            -- 'free' | 'start' | 'pro' | 'max'
+  id text primary key,
   name text not null,
-  price_uzs int not null,         -- so‘m, oy
+  price_uzs int not null,
   bot_limit int not null,
-  message_limit int not null,     -- bot bo‘yicha oy
+  message_limit int not null,
   kb_chunks_limit int not null,
   features jsonb default '[]',
   is_active boolean default true,
@@ -26,11 +26,6 @@ on conflict (id) do update set
   features = excluded.features,
   sort_order = excluded.sort_order;
 
-alter table public.plans enable row level security;
-drop policy if exists plans_read on public.plans;
-create policy plans_read on public.plans for select using (true);
-
--- Foydalanuvchining hozirgi obunasi
 create table if not exists public.subscriptions (
   user_id uuid primary key references public.app_users(id) on delete cascade,
   plan_id text not null references public.plans(id),
@@ -39,33 +34,30 @@ create table if not exists public.subscriptions (
   updated_at timestamptz default now()
 );
 
-alter table public.subscriptions enable row level security;
-drop policy if exists subs_owner on public.subscriptions;
-create policy subs_owner on public.subscriptions for select
-  using (user_id = public.current_app_user_id());
-
--- Default har user’ga `free`
 create or replace function public.ensure_subscription(p_user_id uuid) returns void
-language plpgsql security definer set search_path = public as $$
+language plpgsql as $$
 begin
   insert into public.subscriptions (user_id, plan_id, active)
   values (p_user_id, 'free', true)
   on conflict (user_id) do nothing;
 end $$;
 
-grant execute on function public.ensure_subscription(uuid) to service_role, authenticated;
-
--- To‘lov tranzaksiyalari (Click, keyin Payme/Stripe ham qo‘shiladi)
-create type pay_provider as enum ('click', 'payme', 'stripe', 'manual');
-create type pay_status as enum ('pending', 'authorized', 'paid', 'cancelled', 'failed');
+do $$ begin
+  if not exists (select 1 from pg_type where typname = 'pay_provider') then
+    create type pay_provider as enum ('click', 'payme', 'stripe', 'manual');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'pay_status') then
+    create type pay_status as enum ('pending', 'authorized', 'paid', 'cancelled', 'failed');
+  end if;
+end $$;
 
 create table if not exists public.payments (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.app_users(id) on delete cascade,
   plan_id text not null references public.plans(id),
   provider pay_provider not null,
-  provider_txn_id text,             -- Click click_trans_id va h.k.
-  merchant_trans_id text unique,    -- bizning ichki id
+  provider_txn_id text,
+  merchant_trans_id text unique,
   amount_uzs int not null,
   status pay_status default 'pending',
   metadata jsonb default '{}',
@@ -75,14 +67,8 @@ create table if not exists public.payments (
 
 create index if not exists idx_payments_user on public.payments (user_id, created_at desc);
 
-alter table public.payments enable row level security;
-drop policy if exists pay_owner on public.payments;
-create policy pay_owner on public.payments for select
-  using (user_id = public.current_app_user_id());
-
--- Plan limit checker
 create or replace function public.check_bot_limit(p_user_id uuid) returns boolean
-language sql stable security definer set search_path = public as $$
+language sql stable as $$
   select (select count(*) from public.bots where owner_id = p_user_id and deleted_at is null) <
          coalesce((select p.bot_limit
                    from public.subscriptions s
@@ -90,12 +76,9 @@ language sql stable security definer set search_path = public as $$
                    where s.user_id = p_user_id and s.active), 1);
 $$;
 
-grant execute on function public.check_bot_limit(uuid) to service_role, authenticated;
-
--- Plan o‘zgartirish (to‘lov muvaffaqiyatli bo‘lsa)
 create or replace function public.upgrade_subscription(p_user_id uuid, p_plan_id text, p_period_days int default 30)
 returns void
-language sql security definer set search_path = public as $$
+language sql as $$
   insert into public.subscriptions (user_id, plan_id, active, current_period_end, updated_at)
   values (p_user_id, p_plan_id, true, now() + (p_period_days || ' days')::interval, now())
   on conflict (user_id) do update set
@@ -104,11 +87,8 @@ language sql security definer set search_path = public as $$
     current_period_end = excluded.current_period_end,
     updated_at = now();
 
-  -- Plan limitiga botlarning monthly_message_limit ni yangilash
   update public.bots b
      set monthly_message_limit = p.message_limit
     from public.plans p
    where b.owner_id = p_user_id and p.id = p_plan_id;
 $$;
-
-grant execute on function public.upgrade_subscription(uuid, text, int) to service_role;

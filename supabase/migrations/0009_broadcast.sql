@@ -1,7 +1,16 @@
--- Broadcast: bot egasi mijozlarga xabar yuboradi.
+-- Broadcast queue.
 
-create type bcast_status as enum ('draft','queued','sending','done','cancelled');
-create type bcast_segment as enum ('all','leads','converted','no_lead');
+do $$ begin
+  if not exists (select 1 from pg_type where typname = 'bcast_status') then
+    create type bcast_status as enum ('draft','queued','sending','done','cancelled');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'bcast_segment') then
+    create type bcast_segment as enum ('all','leads','converted','no_lead');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'bcast_recipient_status') then
+    create type bcast_recipient_status as enum ('pending','sent','failed');
+  end if;
+end $$;
 
 create table if not exists public.broadcasts (
   id uuid primary key default gen_random_uuid(),
@@ -20,8 +29,6 @@ create table if not exists public.broadcasts (
 
 create index if not exists idx_bc_bot on public.broadcasts (bot_id, created_at desc);
 
-create type bcast_recipient_status as enum ('pending','sent','failed');
-
 create table if not exists public.broadcast_recipients (
   id uuid primary key default gen_random_uuid(),
   broadcast_id uuid not null references public.broadcasts(id) on delete cascade,
@@ -36,22 +43,8 @@ create table if not exists public.broadcast_recipients (
 create index if not exists idx_br_status on public.broadcast_recipients (status, broadcast_id);
 create index if not exists idx_br_pending on public.broadcast_recipients (broadcast_id) where status = 'pending';
 
-alter table public.broadcasts            enable row level security;
-alter table public.broadcast_recipients  enable row level security;
-
-drop policy if exists bc_owner on public.broadcasts;
-create policy bc_owner on public.broadcasts for all
-  using (exists (select 1 from public.bots b where b.id = broadcasts.bot_id and b.owner_id = public.current_app_user_id()))
-  with check (exists (select 1 from public.bots b where b.id = broadcasts.bot_id and b.owner_id = public.current_app_user_id()));
-
-drop policy if exists br_owner on public.broadcast_recipients;
-create policy br_owner on public.broadcast_recipients for all
-  using (exists (select 1 from public.bots b where b.id = broadcast_recipients.bot_id and b.owner_id = public.current_app_user_id()))
-  with check (exists (select 1 from public.bots b where b.id = broadcast_recipients.bot_id and b.owner_id = public.current_app_user_id()));
-
--- Recipientlarni segmentdan to‘ldiruvchi RPC
 create or replace function public.broadcast_enqueue(p_broadcast_id uuid)
-returns int language plpgsql security definer set search_path = public as $$
+returns int language plpgsql as $$
 declare
   v_bot uuid;
   v_seg bcast_segment;
@@ -98,5 +91,3 @@ begin
    where id = p_broadcast_id;
   return v_count;
 end $$;
-
-grant execute on function public.broadcast_enqueue(uuid) to service_role, authenticated;

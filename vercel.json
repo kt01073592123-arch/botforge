@@ -1,8 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/broadcast",
-      "schedule": "0 9 * * *"
+      "path": "/api/cron/maintenance",
+      "schedule": "0 0 * * *"
     }
   ]
 }

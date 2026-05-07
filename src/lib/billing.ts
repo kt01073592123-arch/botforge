@@ -32,15 +32,20 @@ export async function listPlans(): Promise<Plan[]> {
 
 export async function getSubscription(userId: string): Promise<{ sub: Subscription; plan: Plan } | null> {
   await db().rpc("ensure_subscription", { p_user_id: userId });
-  const { data } = await db()
+  const { data: sub } = await db()
     .from("subscriptions")
-    .select("*, plan:plans(*)")
+    .select("*")
     .eq("user_id", userId)
     .maybeSingle();
-  if (!data) return null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { plan, ...sub } = data as any;
-  return { sub: sub as Subscription, plan: plan as Plan };
+  if (!sub) return null;
+  const s = sub as unknown as Subscription;
+  const { data: plan } = await db()
+    .from("plans")
+    .select("*")
+    .eq("id", s.plan_id)
+    .maybeSingle();
+  if (!plan) return null;
+  return { sub: s, plan: plan as unknown as Plan };
 }
 
 export async function canCreateBot(userId: string): Promise<boolean> {

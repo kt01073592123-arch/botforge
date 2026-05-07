@@ -1,8 +1,6 @@
-"use client";
-
-import { createBrowserClient } from "@supabase/ssr";
-import { publicEnv } from "../env";
+// Browserda Supabase ishlatilmaydi (server actions/API routes orqali ishlaymiz).
+// Eski importlar singan bo‘lmasligi uchun bo‘sh export.
 
 export function browserClient() {
-  return createBrowserClient(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey);
+  throw new Error("browserClient endi ishlatilmaydi — server API’dan foydalaning");
 }

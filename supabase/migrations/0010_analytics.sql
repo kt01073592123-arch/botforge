@@ -1,4 +1,4 @@
--- Kunlik agregat — analytics uchun.
+-- Kunlik analytics.
 
 create or replace function public.bot_daily_stats(p_bot_id uuid, p_days int default 30)
 returns table (
@@ -8,7 +8,7 @@ returns table (
   messages int,
   cost_usd numeric
 )
-language sql stable security definer set search_path = public as $$
+language sql stable as $$
   with d as (
     select generate_series(current_date - (p_days - 1), current_date, '1 day')::date as day
   )
@@ -25,5 +25,3 @@ language sql stable security definer set search_path = public as $$
   from d
   order by d.day;
 $$;
-
-grant execute on function public.bot_daily_stats(uuid, int) to service_role, authenticated, anon;
