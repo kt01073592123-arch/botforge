@@ -4,6 +4,7 @@
 import { openai } from "./openai";
 import { db } from "../supabase/server";
 import { env } from "../env";
+import { searchKnowledge } from "../kb";
 import type { BotRow, BotData, MessageRow } from "../supabase/types";
 
 export type AiAction =
@@ -89,10 +90,21 @@ export async function generateReply(opts: {
     .maybeSingle();
   const bd = bdRow as BotData | null;
 
+  // RAG: oxirgi user xabari asosida tegishli ma'lumot bo‘laklarini topamiz
+  const lastUserMsg = [...opts.history].reverse().find((m) => m.role === "user")?.content ?? "";
+  const kbHits = await searchKnowledge({ botId: opts.bot.id, query: lastUserMsg, limit: 3 });
+  const kbBlock =
+    kbHits.length > 0
+      ? `\n\n=== KNOWLEDGE_BASE (relevant) ===\n${kbHits
+          .map((h, i) => `[${i + 1}] ${h.content}`)
+          .join("\n\n")}\n`
+      : "";
+
   const system = [
     opts.bot.system_prompt ?? "",
     "\n\n=== BUSINESS_CONTEXT ===\n",
     buildBusinessContext(opts.bot, bd),
+    kbBlock,
   ].join("\n");
 
   const messages = [

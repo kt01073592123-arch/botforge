@@ -126,6 +126,22 @@ export class TgBot {
   sendChatAction(chatId: number | string, action = "typing") {
     return this.call("sendChatAction", { chat_id: chatId, action });
   }
+
+  answerCallbackQuery(id: string, text?: string) {
+    return this.call("answerCallbackQuery", { callback_query_id: id, text });
+  }
+
+  editMessageReplyMarkup(
+    chatId: number | string,
+    messageId: number,
+    replyMarkup: Record<string, unknown> | null
+  ) {
+    return this.call("editMessageReplyMarkup", {
+      chat_id: chatId,
+      message_id: messageId,
+      reply_markup: replyMarkup ?? { inline_keyboard: [] },
+    });
+  }
 }
 
 export class TelegramApiError extends Error {

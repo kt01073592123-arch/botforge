@@ -6,6 +6,7 @@ import { z } from "zod";
 import { verifyInitData } from "@/lib/telegram";
 import { upsertTelegramUser } from "@/lib/users";
 import { signSession, setSessionCookie } from "@/lib/auth";
+import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +14,15 @@ export const dynamic = "force-dynamic";
 const Body = z.object({ initData: z.string().min(10) });
 
 export async function POST(req: Request) {
+  // Brute-force oldini olish: 1 daqiqada 10 ta urinish
+  const ok = await rateLimit({
+    scope: "api_ip",
+    key: clientIp(req),
+    windowSeconds: 60,
+    limit: 10,
+  });
+  if (!ok) return NextResponse.json({ error: "Juda ko‘p urinish" }, { status: 429 });
+
   let payload;
   try {
     payload = Body.parse(await req.json());

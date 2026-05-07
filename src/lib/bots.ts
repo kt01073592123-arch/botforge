@@ -5,6 +5,7 @@ import { db } from "./supabase/server";
 import { encryptToken, decryptToken, maskToken } from "./encryption";
 import { TgBot, TelegramApiError } from "./telegram";
 import { env } from "./env";
+import { canCreateBot } from "./billing";
 import type { BotRow, BotData, BotTemplateRow } from "./supabase/types";
 
 export async function listBots(ownerId: string): Promise<BotRow[]> {
@@ -47,6 +48,12 @@ export async function createBot(opts: {
   language?: string;
 }): Promise<BotRow> {
   const sb = db();
+
+  // Plan limit
+  const ok = await canCreateBot(opts.ownerId);
+  if (!ok) {
+    throw new Error("Tarif limiti tugadi. Tarifni yangilang yoki keraksiz botni o‘chiring.");
+  }
 
   const { data: tmpl, error: tErr } = await sb
     .from("bot_templates")

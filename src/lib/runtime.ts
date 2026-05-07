@@ -4,42 +4,70 @@ import { db } from "./supabase/server";
 import { TgBot } from "./telegram";
 import { getBotToken } from "./bots";
 import { generateReply, estimateCostUsd, type AiAction } from "./ai/engine";
+import { rateLimit } from "./ratelimit";
+import { alertOwner } from "./alerts";
 import type { BotRow, ConversationRow, MessageRow } from "./supabase/types";
-import type { TgUpdate, TgMessage } from "./telegram";
+import type { TgUpdate, TgMessage, TgCallbackQuery } from "./telegram";
 
-const REPLY_BUTTONS = (texts: string[]) =>
-  texts.length === 0
-    ? undefined
-    : {
-        keyboard: texts.map((t) => [{ text: t }]),
-        resize_keyboard: true,
-      };
+// Reply keyboard: oddiy tugma ro‘yxati. Inline keyboard: callback_data bilan.
+function buildKeyboard(buttons: string[]) {
+  if (buttons.length === 0) return undefined;
+  // Reply keyboard + contact share tugma — Beauty/Lead bot uchun foydali
+  const rows = [
+    ...buttons.map((t) => [{ text: t }]),
+    [{ text: "📞 Telefon raqamimni yuborish", request_contact: true }],
+  ];
+  return { keyboard: rows, resize_keyboard: true };
+}
+
+// Inline tugmalar — “Telefon kutib turing” yoki “Bron tasdiqlash” kabi tezkor amallar
+function inlineReplies() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "🛟 Operator", callback_data: "request_human" },
+        { text: "🔁 Boshidan", callback_data: "restart" },
+      ],
+    ],
+  };
+}
 
 export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void> {
+  if (update.callback_query) {
+    return handleCallback(bot, update.callback_query);
+  }
+
   const msg = update.message ?? update.edited_message;
   if (!msg) return;
   const text = (msg.text ?? "").trim();
   if (!text && !msg.contact) return;
 
-  // 1. Bot pause/limit tekshiruvi
   if (bot.status !== "active") return;
   if (bot.monthly_messages_used >= bot.monthly_message_limit) {
-    return; // soft limit
+    await alertOwner({ botId: bot.id, kind: "limit_reached" });
+    return;
   }
+
+  const ok = await rateLimit({
+    scope: "tg_chat",
+    key: `${bot.id}|${msg.chat.id}`,
+    windowSeconds: 30,
+    limit: 10,
+  });
+  if (!ok) return;
 
   const sb = db();
   const token = await getBotToken(bot.id);
   const tg = new TgBot(token);
 
-  // 2. Conversation upsert
   const conv = await getOrCreateConversation(bot.id, msg);
 
-  // 3. /start — welcome
+  // /start — welcome + keyboard
   if (text === "/start") {
     if (bot.welcome_message) {
       const buttons = await getDefaultButtons(bot);
       await tg.sendMessage(msg.chat.id, bot.welcome_message, {
-        reply_markup: REPLY_BUTTONS(buttons),
+        reply_markup: buildKeyboard(buttons),
       });
       await sb.from("messages").insert({
         conversation_id: conv.id,
@@ -51,7 +79,7 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
     return;
   }
 
-  // 4. Contact — telefon raqami
+  // Contact — telefon raqami
   let userText = text;
   if (msg.contact) {
     userText = `[Mijoz telefon yubordi: ${msg.contact.phone_number}]`;
@@ -61,7 +89,6 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
       .eq("id", conv.id);
   }
 
-  // 5. User msg saqlash
   await sb.from("messages").insert({
     conversation_id: conv.id,
     bot_id: bot.id,
@@ -70,10 +97,14 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
     tg_message_id: msg.message_id,
   });
 
-  // 6. Waiting human bo‘lsa — javob bermaymiz, faqat saqlaymiz
-  if (conv.status === "waiting_human") return;
+  if (conv.status === "waiting_human") {
+    // Mijozga: operatorga uzatildi
+    await tg
+      .sendMessage(msg.chat.id, "Xabaringizni operatorga uzatdim. Tez orada javob beramiz 🙏")
+      .catch(() => {});
+    return;
+  }
 
-  // 7. AI ga uzatish
   await tg.sendChatAction(msg.chat.id, "typing").catch(() => {});
 
   const { data: history } = await sb
@@ -83,17 +114,25 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
     .order("created_at", { ascending: true })
     .limit(30);
 
-  const result = await generateReply({
-    bot,
-    history: (history ?? []) as Pick<MessageRow, "role" | "content">[],
-  });
+  let result;
+  try {
+    result = await generateReply({
+      bot,
+      history: (history ?? []) as Pick<MessageRow, "role" | "content">[],
+    });
+  } catch (e) {
+    const m = (e as Error).message;
+    await alertOwner({ botId: bot.id, kind: "ai_error", details: m });
+    await tg
+      .sendMessage(msg.chat.id, "Hozir texnik xatolik. Tez orada hal qilamiz, kechirasiz 🙏")
+      .catch(() => {});
+    return;
+  }
 
-  // 8. Actions ni bajarish
   for (const action of result.actions) {
     await runAction(bot, conv, msg, tg, action);
   }
 
-  // 9. AI usage hisobi
   const cost = estimateCostUsd(bot.ai_model, result.usage.prompt, result.usage.completion);
   await sb.from("ai_usage").insert({
     bot_id: bot.id,
@@ -105,11 +144,51 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
   });
   const rpcRes = await sb.rpc("increment_bot_messages", { p_bot_id: bot.id });
   if (rpcRes.error) {
-    // RPC bo‘lmasa oddiy update
     await sb
       .from("bots")
       .update({ monthly_messages_used: bot.monthly_messages_used + 1 })
       .eq("id", bot.id);
+  }
+}
+
+async function handleCallback(bot: BotRow, cb: TgCallbackQuery) {
+  if (!cb.message) return;
+  const token = await getBotToken(bot.id);
+  const tg = new TgBot(token);
+
+  // Hammavaqt javob qaytarish kerak — Telegram clientda «yuklanmoqda» yo‘qolishi uchun
+  await tg.answerCallbackQuery(cb.id).catch(() => {});
+
+  const sb = db();
+  const conv = await getOrCreateConversation(bot.id, cb.message);
+
+  if (cb.data === "request_human") {
+    await sb.from("conversations").update({ status: "waiting_human" }).eq("id", conv.id);
+    await tg.sendMessage(
+      cb.message.chat.id,
+      "Operator chaqirildi. Tez orada javob beramiz 🙏"
+    );
+    if (bot.admin_chat_id) {
+      await tg
+        .sendMessage(
+          bot.admin_chat_id,
+          `🛟 Operator chaqirildi.\nMijoz: ${conv.customer_name ?? "?"} (@${
+            conv.customer_username ?? "?"
+          })`
+        )
+        .catch(() => {});
+    }
+    return;
+  }
+
+  if (cb.data === "restart") {
+    if (bot.welcome_message) {
+      const buttons = await getDefaultButtons(bot);
+      await tg.sendMessage(cb.message.chat.id, bot.welcome_message, {
+        reply_markup: buildKeyboard(buttons),
+      });
+    }
+    return;
   }
 }
 
@@ -123,7 +202,9 @@ async function runAction(
   const sb = db();
   switch (action.type) {
     case "send":
-      await tg.sendMessage(msg.chat.id, action.text);
+      await tg.sendMessage(msg.chat.id, action.text, {
+        reply_markup: inlineReplies(),
+      });
       await sb.from("messages").insert({
         conversation_id: conv.id,
         bot_id: bot.id,

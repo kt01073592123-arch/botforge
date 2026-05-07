@@ -4,10 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Topbar from "@/components/Topbar";
 import StatusBadge from "@/components/StatusBadge";
+import Onboarding from "@/components/Onboarding";
+import LangSwitch from "@/components/LangSwitch";
+import { useT } from "@/hooks/useT";
 import type { BotRow } from "@/lib/supabase/types";
 
 export default function BotsPage() {
   const [bots, setBots] = useState<BotRow[] | null>(null);
+  const { t } = useT();
 
   useEffect(() => {
     fetch("/api/bots")
@@ -18,18 +22,24 @@ export default function BotsPage() {
   return (
     <div>
       <Topbar
-        title="Mening botlarim"
+        title={t("my_bots")}
         right={
-          <Link href="/app/bots/new" className="btn-primary !py-1.5 !px-3 !text-xs">
-            + Yangi bot
-          </Link>
+          <div className="flex gap-2 items-center">
+            <LangSwitch />
+            <Link href="/app/billing" className="btn-ghost !py-1.5 !px-3 !text-xs">
+              💎
+            </Link>
+            <Link href="/app/bots/new" className="btn-primary !py-1.5 !px-3 !text-xs">
+              {t("new_bot")}
+            </Link>
+          </div>
         }
       />
       <div className="max-w-3xl mx-auto px-4 py-4">
         {bots === null ? (
-          <div className="text-sm text-muted py-8 text-center">Yuklanmoqda…</div>
+          <div className="text-sm text-muted py-8 text-center">{t("loading")}</div>
         ) : bots.length === 0 ? (
-          <EmptyState />
+          <Onboarding />
         ) : (
           <div className="grid gap-3">
             {bots.map((b) => (
@@ -54,21 +64,6 @@ export default function BotsPage() {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="panel p-8 text-center">
-      <div className="text-4xl mb-3">✨</div>
-      <div className="font-semibold mb-1">Hali bot yaratmagansiz</div>
-      <div className="text-sm text-muted mb-5">
-        Bir nechta tugma bilan o‘zingizning AI manager botingizni yarating.
-      </div>
-      <Link href="/app/bots/new" className="btn-primary">
-        Bot yaratish
-      </Link>
     </div>
   );
 }

@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase/server";
 import { handleUpdate } from "@/lib/runtime";
+import { alertOwner } from "@/lib/alerts";
 import type { TgUpdate } from "@/lib/telegram";
 import type { BotRow } from "@/lib/supabase/types";
 
@@ -43,12 +44,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ botId: string 
     await handleUpdate(bot, update);
     return NextResponse.json({ ok: true });
   } catch (e) {
+    const errMsg = (e as Error).message;
     await sb.from("webhook_logs").insert({
       bot_id: bot.id,
       status: 500,
-      error: (e as Error).message,
+      error: errMsg,
       payload: update as unknown as Record<string, unknown>,
     });
+    // Bot egasini xabardor qilamiz
+    await alertOwner({ botId: bot.id, kind: "webhook_error", details: errMsg });
     // Foydalanuvchini blockda saqlamaslik uchun 200 qaytaramiz, log yozildi
     return NextResponse.json({ ok: false, error: "handler_error" });
   }
