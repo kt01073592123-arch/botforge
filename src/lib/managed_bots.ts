@@ -213,13 +213,20 @@ export async function completeManagedBotCreation(opts: {
     })
     .eq("id", draft.id);
 
-  // 5. Webhookni yangi bot uchun o‘rnatish (auto-activate)
+  // 5. Webhookni yangi bot uchun o‘rnatish (auto-activate) + auto-polish
   if (draft.webhook_secret) {
     try {
       const userBot = new TgBot(token);
       const url = `${env().WEBHOOK_BASE_URL}/api/tg/${draft.id}`;
       await userBot.setWebhook(url, draft.webhook_secret);
       await sb.from("bots").update({ status: "active" }).eq("id", draft.id);
+      // Auto-polish: Telegram’dagi nomi/ta'rif/komandalarni darhol qo‘llaymiz
+      try {
+        const { applyBotPolish } = await import("./bot_polish");
+        await applyBotPolish({ botId: draft.id });
+      } catch {
+        // Polish xato bo‘lsa ham asosiy oqim davom etadi
+      }
     } catch (e) {
       // Webhook tushmasa, status draft qoladi
       await sb

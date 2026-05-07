@@ -205,6 +205,12 @@ export async function activateBot(opts: { ownerId: string; botId: string }) {
   await tg.setWebhook(url, bot.webhook_secret);
 
   await db().from("bots").update({ status: "active" }).eq("id", opts.botId);
+
+  // Auto-polish brendlash
+  try {
+    const { applyBotPolish } = await import("./bot_polish");
+    await applyBotPolish({ ownerId: opts.ownerId, botId: opts.botId });
+  } catch {}
 }
 
 export async function pauseBot(opts: { ownerId: string; botId: string }) {
