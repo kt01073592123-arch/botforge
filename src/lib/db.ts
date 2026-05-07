@@ -54,6 +54,9 @@ class QBBase {
       if (f.op === "is") {
         if (f.val === null) parts.push(`${ident(f.col)} is null`);
         else parts.push(`${ident(f.col)} is not null`);
+      } else if (f.op === "is_not") {
+        if (f.val === null) parts.push(`${ident(f.col)} is not null`);
+        else parts.push(`${ident(f.col)} is null`);
       } else if (f.op === "in") {
         const arr = f.val as unknown[];
         if (arr.length === 0) {
@@ -250,6 +253,12 @@ class QB<T = any> extends QBBase implements PromiseLike<DbResult<T[]>> {
   lt(col: string, val: unknown) { this.filters.push({ col, op: "<", val }); return this; }
   lte(col: string, val: unknown) { this.filters.push({ col, op: "<=", val }); return this; }
   is(col: string, val: unknown) { this.filters.push({ col, op: "is", val }); return this; }
+  // Supabase API: .not('col', 'is', null) → "col is not null". Bizda faqat shu shaklda kerak.
+  not(col: string, op: string, val: unknown) {
+    if (op === "is") this.filters.push({ col, op: "is_not", val });
+    else this.filters.push({ col, op: `not_${op}`, val });
+    return this;
+  }
   in(col: string, vals: unknown[]) { this.filters.push({ col, op: "in", val: vals }); return this; }
 
   // ---- Modifiers ----

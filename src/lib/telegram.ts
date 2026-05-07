@@ -142,6 +142,15 @@ export class TgBot {
       reply_markup: replyMarkup ?? { inline_keyboard: [] },
     });
   }
+
+  // Bot API 9.6: managed bot uchun token olish (faqat manager bot tokeni bilan)
+  getManagedBotToken(userId: number) {
+    return this.call<string>("getManagedBotToken", { user_id: userId });
+  }
+
+  replaceManagedBotToken(userId: number) {
+    return this.call<string>("replaceManagedBotToken", { user_id: userId });
+  }
 }
 
 export class TelegramApiError extends Error {
@@ -157,15 +166,38 @@ export type TgUpdate = {
   message?: TgMessage;
   edited_message?: TgMessage;
   callback_query?: TgCallbackQuery;
+  // Bot API 9.6: managed bot yaratilganda yoki tokeni o‘zgarganda keladi
+  managed_bot?: TgManagedBotUpdated;
+};
+
+export type TgUser = {
+  id: number;
+  is_bot: boolean;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  language_code?: string;
+  can_manage_bots?: boolean;
+};
+
+export type TgManagedBotUpdated = {
+  user: TgUser; // bot yaratuvchi user
+  bot: TgUser; // yangi managed bot
+};
+
+export type TgManagedBotCreated = {
+  bot: TgUser;
 };
 
 export type TgMessage = {
   message_id: number;
-  from?: { id: number; is_bot: boolean; first_name: string; last_name?: string; username?: string; language_code?: string };
+  from?: TgUser;
   chat: { id: number; type: string; first_name?: string; last_name?: string; username?: string };
   date: number;
   text?: string;
   contact?: { phone_number: string; first_name: string; last_name?: string; user_id?: number };
+  // Bot API 9.6: chat ichida service xabar sifatida keladi
+  managed_bot_created?: TgManagedBotCreated;
 };
 
 export type TgCallbackQuery = {
