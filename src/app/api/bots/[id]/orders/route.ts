@@ -46,7 +46,17 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     if (status.length) q = q.in("status", status as never[]);
 
     const { data } = await q;
-    return NextResponse.json({ orders: data ?? [] });
+    // jsonb (items) postgres-driver tomonidan string sifatida qaytishi mumkin — parse qilamiz
+    const orders = (data ?? []).map((o) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row = o as any;
+      let items = row.items;
+      if (typeof items === "string") {
+        try { items = JSON.parse(items); } catch { items = []; }
+      }
+      return { ...row, items: items ?? [], total_uzs: Number(row.total_uzs ?? 0) };
+    });
+    return NextResponse.json({ orders });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });
   }

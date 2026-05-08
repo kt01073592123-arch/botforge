@@ -47,13 +47,22 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
         ? c.tags
         : typeof c.tags === "string"
         ? (() => {
+            // text[] PostgreSQL formatda yoki JSON string bo‘lishi mumkin
+            const s = c.tags as string;
+            if (s.startsWith("{") && s.endsWith("}")) {
+              // PostgreSQL array format: {tag1,tag2}
+              return s.slice(1, -1).split(",").map((t) => t.trim()).filter(Boolean);
+            }
             try {
-              return JSON.parse(c.tags);
+              return JSON.parse(s);
             } catch {
               return [];
             }
           })()
         : [],
+      total_spent_uzs: Number(c.total_spent_uzs ?? 0),
+      total_orders: Number(c.total_orders ?? 0),
+      loyalty_points: Number(c.loyalty_points ?? 0),
     }));
 
     if (search) {

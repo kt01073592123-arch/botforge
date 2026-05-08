@@ -155,7 +155,7 @@ export default function BotDetailPage() {
           <Stat label="Jami lead" value={stats?.leads_total ?? "·"} />
           <Stat
             label="30 kun AI ($)"
-            value={stats ? stats.cost_usd_30d.toFixed(3) : "·"}
+            value={stats ? Number(stats.cost_usd_30d).toFixed(3) : "·"}
           />
         </div>
 
