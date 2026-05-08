@@ -162,10 +162,15 @@ export default function BotDetailPage() {
         <div className="grid grid-cols-2 gap-2">
           <NavCard href={`/app/bots/${id}/share`} icon="📲" title="Ulashish + QR" />
           <NavCard href={`/app/bots/${id}/services`} icon="📋" title="Xizmatlar va narxlar" />
+          <NavCard href={`/app/bots/${id}/bookings`} icon="📅" title="Bronlar" />
+          <NavCard href={`/app/bots/${id}/orders`} icon="🛒" title="Buyurtmalar" />
+          <NavCard href={`/app/bots/${id}/customers`} icon="👥" title="Mijozlar (CRM)" />
           <NavCard href={`/app/bots/${id}/import`} icon="📥" title="Avtomatik to‘ldirish" />
           <NavCard href={`/app/bots/${id}/kb`} icon="📚" title="Bilim bazasi" />
           <NavCard href={`/app/bots/${id}/conversations`} icon="💬" title="Suhbatlar" />
           <NavCard href={`/app/bots/${id}/leads`} icon="📞" title="Leadlar" />
+          <NavCard href={`/app/bots/${id}/reviews`} icon="⭐" title="Sharhlar" />
+          <NavCard href={`/app/bots/${id}/loyalty`} icon="🎫" title="Sodiqlik dasturi" />
           <NavCard href={`/app/bots/${id}/broadcast`} icon="📣" title="Xabar tarqatish" />
           <NavCard href={`/app/bots/${id}/analytics`} icon="📊" title="Analytics" />
           <NavCard href={`/app/bots/${id}/settings`} icon="⚙️" title="Sozlamalar" />
@@ -185,6 +190,32 @@ export default function BotDetailPage() {
               ▶ Botni faollashtirish
             </button>
           )}
+          <button
+            onClick={async () => {
+              const name = prompt("Yangi bot nomi:", bot.name + " (kopiya)");
+              if (!name) return;
+              setBusy(true);
+              try {
+                const res = await fetch(`/api/bots/${id}/duplicate`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ name }),
+                });
+                const d = await res.json();
+                if (!res.ok) {
+                  alert(d.error);
+                  return;
+                }
+                r.replace(`/app/bots/${d.bot.id}/connect`);
+              } finally {
+                setBusy(false);
+              }
+            }}
+            disabled={busy}
+            className="btn-ghost"
+          >
+            📋 Klon
+          </button>
           <button onClick={remove} disabled={busy} className="btn-danger">
             O‘chirish
           </button>

@@ -129,17 +129,43 @@ export async function POST(req: Request, ctx: { params: Promise<{ username: stri
     }
   }
 
-  // Lead yaratamiz
-  const { error: leadErr } = await sb.from("leads").insert({
+  // Order yaratamiz (yangi v4 — order lifecycle)
+  const { data: orderRow } = await sb
+    .from("orders")
+    .insert({
+      bot_id: bot.id,
+      conversation_id: convId,
+      customer_name: body.customer_name,
+      customer_phone: body.customer_phone,
+      customer_tg_id: tgUser?.id ?? null,
+      customer_tg_username: tgUser?.username ?? null,
+      items: body.items,
+      total_uzs: body.total_uzs,
+      note: body.note,
+    })
+    .select("id")
+    .single();
+  const orderId = (orderRow?.id as string | undefined) ?? null;
+
+  // Customer profile yangilash
+  if (tgUser?.id) {
+    await sb.rpc("upsert_customer_profile", {
+      p_bot_id: bot.id,
+      p_tg_id: tgUser.id,
+      p_name: body.customer_name ?? tgUser.first_name ?? null,
+      p_phone: body.customer_phone,
+      p_username: tgUser.username ?? null,
+    });
+  }
+
+  // Lead ham yozamiz (eski statistika va dashboard kompatibilligi uchun)
+  await sb.from("leads").insert({
     bot_id: bot.id,
     conversation_id: convId,
     name: body.customer_name,
     phone: body.customer_phone,
     request: requestText,
   });
-  if (leadErr) {
-    return NextResponse.json({ error: leadErr.message }, { status: 500 });
-  }
 
   // Admin Telegram’ga xabar
   if (bot.admin_chat_id) {
@@ -172,5 +198,5 @@ export async function POST(req: Request, ctx: { params: Promise<{ username: stri
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, order_id: orderId ?? null });
 }

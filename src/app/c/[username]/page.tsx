@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import BookingSheet from "@/components/BookingSheet";
 
 type Service = {
   name: string;
@@ -47,6 +48,7 @@ export default function CustomerWebApp() {
   const [activeCat, setActiveCat] = useState<string | "all">("all");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
+  const [bookingService, setBookingService] = useState<Service | null>(null);
 
   // Telegram WebApp init
   useEffect(() => {
@@ -203,6 +205,7 @@ export default function CustomerWebApp() {
                   inCartQty={inCart?.qty ?? 0}
                   onAdd={() => addToCart(s, data.services.indexOf(s))}
                   onUpdate={(delta) => updateQty(pid, delta)}
+                  onBook={() => setBookingService(s)}
                 />
               );
             })}
@@ -245,6 +248,17 @@ export default function CustomerWebApp() {
           }}
         />
       )}
+
+      {/* Booking sheet */}
+      {bookingService && (
+        <BookingSheet
+          username={username}
+          service={bookingService}
+          accent={accent}
+          gradient={gradient}
+          onClose={() => setBookingService(null)}
+        />
+      )}
     </div>
   );
 }
@@ -255,12 +269,14 @@ function ProductCard({
   inCartQty,
   onAdd,
   onUpdate,
+  onBook,
 }: {
   service: Service;
   accent: string;
   inCartQty: number;
   onAdd: () => void;
   onUpdate: (delta: number) => void;
+  onBook: () => void;
 }) {
   const out = service.in_stock === false;
   return (
@@ -296,7 +312,15 @@ function ProductCard({
             {service.price}
           </div>
           {!out &&
-            (inCartQty > 0 ? (
+            (service.duration ? (
+              <button
+                onClick={onBook}
+                className="px-2.5 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
+                style={{ background: accent, color: "#fff" }}
+              >
+                📅 Bron
+              </button>
+            ) : inCartQty > 0 ? (
               <div
                 className="flex items-center gap-1.5 text-sm font-semibold rounded-full px-1"
                 style={{ background: accent, color: "#fff" }}

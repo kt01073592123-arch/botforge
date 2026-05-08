@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Topbar from "@/components/Topbar";
+import PhotoInput from "@/components/PhotoInput";
 import type { BotData, ServiceItem, Category } from "@/lib/supabase/types";
 
 const DAYS = [
@@ -181,6 +182,7 @@ export default function ServicesPage() {
                 service={s}
                 categories={categories}
                 expanded={expandedItem === i}
+                botId={id}
                 onToggle={() => setExpandedItem(expandedItem === i ? null : i)}
                 onChange={(patch) => updateService(i, patch)}
                 onRemove={() => removeService(i)}
@@ -325,6 +327,7 @@ function ServiceCard({
   service,
   categories,
   expanded,
+  botId,
   onToggle,
   onChange,
   onRemove,
@@ -332,6 +335,7 @@ function ServiceCard({
   service: ServiceItem;
   categories: Category[];
   expanded: boolean;
+  botId: string;
   onToggle: () => void;
   onChange: (patch: Partial<ServiceItem>) => void;
   onRemove: () => void;
@@ -376,18 +380,12 @@ function ServiceCard({
       {expanded && (
         <div className="space-y-2 pt-2 border-t border-border">
           <div>
-            <label className="label">Rasm URL (ixtiyoriy)</label>
-            <input
-              className="input !text-xs"
-              placeholder="https://... yoki Instagram post linki"
-              value={service.photo_url ?? ""}
-              onChange={(e) =>
-                onChange({ photo_url: e.target.value.trim() || undefined })
-              }
+            <label className="label">Rasm</label>
+            <PhotoInput
+              botId={botId}
+              value={service.photo_url}
+              onChange={(url) => onChange({ photo_url: url })}
             />
-            <div className="text-[11px] text-muted mt-0.5">
-              💡 Instagram’dagi rasm linkiga o‘ng tugma → "Copy image address"
-            </div>
           </div>
 
           <div>
