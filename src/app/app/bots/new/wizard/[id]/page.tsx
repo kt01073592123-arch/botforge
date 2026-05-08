@@ -46,28 +46,53 @@ export default function WizardPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Pack ma’lumotini olish (resolved bilan)
+  // Pack ma’lumotini birinchi marta olish — auto-defaults bilan.
+  // Bu effect faqat id ga bog‘liq, keyingi qadam o‘zgarishi qayta render bermaydi.
   useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/templates/${id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled || !d.pack) return;
+        setPack(d.pack);
+        setResolved(d.resolved);
+        // Default tanlovlar — agar hali tanlanmagan bo‘lsa
+        if (d.pack.sub_types?.length) {
+          setSubType((cur) =>
+            cur ?? d.pack.sub_types[Math.floor(d.pack.sub_types.length / 2)]?.id
+          );
+        }
+        if (d.pack.tones?.length) {
+          setTone((cur) => {
+            if (cur) return cur;
+            const friendly = d.pack.tones.find((t: Tone) => t.id === "friendly");
+            return friendly?.id ?? d.pack.tones[0].id;
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  // Choice o‘zgarganda faqat resolved (live preview narxlari) qayta yuklanadi.
+  // Pack o‘zi qayta yuklanmaydi — input elementlari mount’dan tushmaydi.
+  useEffect(() => {
+    if (!pack) return;
     const params = new URLSearchParams();
     if (subType) params.set("sub_type", subType);
     params.set("tier", tier);
     if (tone) params.set("tone", tone);
+    let cancelled = false;
     fetch(`/api/templates/${id}?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => {
-        if (!d.pack) return;
-        setPack(d.pack);
-        setResolved(d.resolved);
-        // Default tanlovlar (faqat birinchi yuklash)
-        if (!subType && d.pack.sub_types?.length) {
-          setSubType(d.pack.sub_types[Math.floor(d.pack.sub_types.length / 2)]?.id);
-        }
-        if (!tone && d.pack.tones?.length) {
-          const friendly = d.pack.tones.find((t: Tone) => t.id === "friendly");
-          setTone(friendly?.id ?? d.pack.tones[0].id);
-        }
+        if (!cancelled && d.resolved) setResolved(d.resolved);
       });
-  }, [id, subType, tier, tone]);
+    return () => {
+      cancelled = true;
+    };
+  }, [id, pack, subType, tier, tone]);
 
   const totalSteps = pack?.is_pack ? 4 : 1;
   const progress = useMemo(
@@ -233,28 +258,52 @@ export default function WizardPage() {
             title="Biznesingiz ma'lumotlari"
             subtitle="Faqat 2 ta maydon — qolganini keyin to‘ldirasiz"
           >
-            <div className="space-y-3">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (name) setStep(4);
+              }}
+              className="space-y-3"
+              autoComplete="off"
+            >
               <div>
-                <label className="label">Bot nomi (ichki)</label>
+                <label htmlFor="bot-name" className="label">
+                  Bot nomi (ichki)
+                </label>
                 <input
+                  id="bot-name"
+                  name="bot_name"
+                  type="text"
                   className="input"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Masalan: Lash Studio Manager"
                   required
                   minLength={2}
+                  autoComplete="off"
+                  inputMode="text"
+                  autoFocus
                 />
               </div>
               <div>
-                <label className="label">Biznes nomi (mijoz ko‘radi)</label>
+                <label htmlFor="biz-name" className="label">
+                  Biznes nomi (mijoz ko‘radi)
+                </label>
                 <input
+                  id="biz-name"
+                  name="business_name"
+                  type="text"
                   className="input"
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   placeholder="Masalan: Lash Studio Tashkent"
+                  autoComplete="off"
+                  inputMode="text"
                 />
               </div>
-            </div>
+              {/* Hidden submit so Enter key works on mobile keyboards */}
+              <button type="submit" className="hidden" />
+            </form>
           </Step>
         )}
 
