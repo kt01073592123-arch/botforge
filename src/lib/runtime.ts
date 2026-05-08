@@ -283,6 +283,15 @@ async function getDefaultButtons(bot: BotRow): Promise<string[]> {
     .select("default_buttons")
     .eq("id", bot.template_id)
     .maybeSingle();
-  const arr = (data?.default_buttons ?? []) as { text: string }[];
-  return arr.map((b) => b.text);
+  // jsonb ba'zan string sifatida keladi — parse qilamiz
+  let raw = data?.default_buttons ?? [];
+  if (typeof raw === "string") {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      raw = [];
+    }
+  }
+  const arr = (raw ?? []) as { text: string }[];
+  return Array.isArray(arr) ? arr.map((b) => b.text) : [];
 }

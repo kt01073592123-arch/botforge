@@ -6,7 +6,7 @@ import { encryptToken, decryptToken, maskToken } from "./encryption";
 import { TgBot, TelegramApiError } from "./telegram";
 import { env } from "./env";
 import { canCreateBot } from "./billing";
-import { resolveConfig, type Pack, type WizardChoices } from "./template_packs";
+import { resolveConfig, getPack, type WizardChoices } from "./template_packs";
 import type { BotRow, BotData, BotTemplateRow } from "./supabase/types";
 
 export async function listBots(ownerId: string): Promise<BotRow[]> {
@@ -60,15 +60,11 @@ export async function createBot(opts: {
     throw new Error("Tarif limiti tugadi. Tarifni yangilang yoki keraksiz botni o‘chiring.");
   }
 
-  const { data: tmpl, error: tErr } = await sb
-    .from("bot_templates")
-    .select("*")
-    .eq("id", opts.templateId)
-    .maybeSingle();
-  if (tErr) throw new Error(tErr.message);
-  if (!tmpl) throw new Error("Template topilmadi");
+  // getPack() jsonb maydonlarni normalize qiladi — to‘g‘ridan-to‘g‘ri sb.from()
+  // raw string qaytaradi, bu resolveConfig.find() ni buzadi.
+  const pack = await getPack(opts.templateId);
+  if (!pack) throw new Error("Template topilmadi");
 
-  const pack = tmpl as Pack;
   const choices: WizardChoices = {
     sub_type_id: opts.subTypeId,
     tier_id: opts.tierId,
