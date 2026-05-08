@@ -52,9 +52,27 @@ export type BotTemplateRow = {
   is_active: boolean;
 };
 
+export type ServiceItem = {
+  name: string;
+  price: string;
+  duration?: string;
+  description?: string;
+  photo_url?: string;
+  category_id?: string;
+  in_stock?: boolean;
+};
+
+export type Category = {
+  id: string;
+  name: string;
+  position?: number;
+  icon?: string;
+};
+
 export type BotData = {
   bot_id: string;
-  services: { name: string; price: string; duration?: string }[];
+  services: ServiceItem[];
+  categories?: Category[];
   working_hours: Record<string, [number, number] | null>;
   contacts: { phone?: string; address?: string; instagram?: string };
   faq: { q: string; a: string }[];

@@ -71,6 +71,23 @@ function trim(s: string, max: number): string {
   return s.length <= max ? s : s.slice(0, max - 1).trimEnd() + "…";
 }
 
+function pickMenuText(vertical: string | null): string {
+  switch (vertical) {
+    case "lash":
+    case "salon":
+    case "kosmetolog":
+      return "📋 Xizmatlar";
+    case "restoran":
+      return "🍽 Menyu";
+    case "avto":
+      return "🔧 Xizmatlar";
+    case "oquv":
+      return "📚 Kurslar";
+    default:
+      return "📋 Katalog";
+  }
+}
+
 function buildShortDescription(bot: BotRow, pack: Pack | null): string {
   // Max 120 chars. Chat ro‘yxatida ko‘rinadi.
   const name = bot.business_name ?? bot.name;
@@ -174,6 +191,22 @@ export async function applyBotPolish(opts: {
     status.applied.commands = true;
   } catch (e) {
     status.errors.push(`commands: ${(e as Error).message}`);
+  }
+
+  // 7) setChatMenuButton — bot’ning chat menyusi customer WebApp’ga ko‘rsatadi
+  if (bot.tg_username) {
+    try {
+      const webAppUrl = `${env().NEXT_PUBLIC_APP_URL}/c/${bot.tg_username}`;
+      await tg.call("setChatMenuButton", {
+        menu_button: {
+          type: "web_app",
+          text: pickMenuText(pack?.vertical ?? null),
+          web_app: { url: webAppUrl },
+        },
+      });
+    } catch (e) {
+      status.errors.push(`menu_button: ${(e as Error).message}`);
+    }
   }
 
   status.ok = status.errors.length === 0;

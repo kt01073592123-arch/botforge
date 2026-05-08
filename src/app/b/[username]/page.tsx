@@ -4,7 +4,16 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
-type Service = { name: string; price: string; duration?: string };
+type Service = {
+  name: string;
+  price: string;
+  duration?: string;
+  description?: string;
+  photo_url?: string;
+  category_id?: string;
+  in_stock?: boolean;
+};
+type Category = { id: string; name: string; position?: number };
 type Faq = { q: string; a: string };
 type WorkingHours = Record<string, [number, number] | null>;
 type BrandKit = {
@@ -24,6 +33,7 @@ type PublicBotData = {
   deep_link: string;
   brand_kit: BrandKit | null;
   services: Service[];
+  categories: Category[];
   faq: Faq[];
   working_hours: WorkingHours;
   contacts: { phone?: string; address?: string; instagram?: string };
@@ -106,30 +116,47 @@ export default async function PublicBotPage(props: {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-8" style={{ color: "#1a1a1a" }}>
-        {/* Services */}
-        {data.services.length > 0 && (
-          <section className="bg-white rounded-2xl p-5 shadow-sm">
-            <h2 className="text-xl font-bold mb-4">Xizmatlar va narxlar</h2>
-            <div className="space-y-2">
-              {data.services.map((s, i) => (
-                <div
-                  key={i}
-                  className="flex justify-between items-baseline py-2 border-b border-gray-100 last:border-0"
-                >
-                  <div>
-                    <div className="font-medium">{s.name}</div>
-                    {s.duration && (
-                      <div className="text-xs text-gray-500">{s.duration}</div>
-                    )}
-                  </div>
-                  <div className="font-bold whitespace-nowrap" style={{ color: accent }}>
-                    {s.price}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Services / Products with photos and categories */}
+        {data.services.length > 0 && (() => {
+          const cats = [...data.categories].sort(
+            (a, b) => (a.position ?? 0) - (b.position ?? 0)
+          );
+          const byCat = new Map<string | null, Service[]>();
+          for (const s of data.services) {
+            const k = s.category_id ?? null;
+            if (!byCat.has(k)) byCat.set(k, []);
+            byCat.get(k)!.push(s);
+          }
+          const sections =
+            cats.length > 0
+              ? [
+                  ...cats.map((c) => ({ id: c.id as string | null, name: c.name })),
+                  { id: null, name: cats.length > 0 ? "Boshqa" : "Mahsulotlar" },
+                ]
+              : [{ id: null, name: "Xizmatlar va narxlar" }];
+
+          return (
+            <>
+              {sections.map((sec) => {
+                const items = byCat.get(sec.id) ?? [];
+                if (items.length === 0) return null;
+                return (
+                  <section
+                    key={sec.id ?? "_other"}
+                    className="bg-white rounded-2xl p-5 shadow-sm"
+                  >
+                    <h2 className="text-xl font-bold mb-4">{sec.name}</h2>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {items.map((s, i) => (
+                        <ProductCard key={i} service={s} accent={accent} />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </>
+          );
+        })()}
 
         {/* Working hours + contacts */}
         <div className="grid sm:grid-cols-2 gap-4">
@@ -216,6 +243,54 @@ export default async function PublicBotPage(props: {
           BotForge
         </a>
       </footer>
+    </div>
+  );
+}
+
+function ProductCard({ service, accent }: { service: Service; accent: string }) {
+  const out = service.in_stock === false;
+  return (
+    <div
+      className={`flex gap-3 p-3 rounded-xl border border-gray-100 ${
+        out ? "opacity-60" : ""
+      }`}
+    >
+      {service.photo_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={service.photo_url}
+          alt={service.name}
+          className="w-20 h-20 rounded-lg object-cover bg-gray-100 flex-shrink-0"
+        />
+      ) : (
+        <div className="w-20 h-20 rounded-lg bg-gray-100 flex items-center justify-center text-2xl flex-shrink-0">
+          📦
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-sm leading-tight">{service.name}</div>
+        {service.description && (
+          <div className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+            {service.description}
+          </div>
+        )}
+        <div className="flex justify-between items-baseline mt-2">
+          <div
+            className="text-sm font-bold whitespace-nowrap"
+            style={{ color: accent }}
+          >
+            {service.price}
+          </div>
+          {service.duration && (
+            <div className="text-xs text-gray-400">{service.duration}</div>
+          )}
+        </div>
+        {out && (
+          <div className="text-[10px] text-red-500 mt-1 uppercase tracking-wider">
+            Hozir yo‘q
+          </div>
+        )}
+      </div>
     </div>
   );
 }

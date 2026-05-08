@@ -8,7 +8,27 @@ export const dynamic = "force-dynamic";
 
 const Body = z.object({
   services: z
-    .array(z.object({ name: z.string(), price: z.string(), duration: z.string().optional() }))
+    .array(
+      z.object({
+        name: z.string(),
+        price: z.string(),
+        duration: z.string().optional(),
+        description: z.string().optional(),
+        photo_url: z.string().optional(),
+        category_id: z.string().optional(),
+        in_stock: z.boolean().optional(),
+      })
+    )
+    .optional(),
+  categories: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        position: z.number().optional(),
+        icon: z.string().optional(),
+      })
+    )
     .optional(),
   working_hours: z.record(z.union([z.tuple([z.number(), z.number()]), z.null()])).optional(),
   contacts: z

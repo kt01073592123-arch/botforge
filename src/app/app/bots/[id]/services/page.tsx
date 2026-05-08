@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Topbar from "@/components/Topbar";
-import type { BotData } from "@/lib/supabase/types";
+import type { BotData, ServiceItem, Category } from "@/lib/supabase/types";
 
 const DAYS = [
   ["mon", "Du"],
@@ -15,11 +15,16 @@ const DAYS = [
   ["sun", "Ya"],
 ] as const;
 
+function genId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
 export default function ServicesPage() {
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<BotData | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [expandedItem, setExpandedItem] = useState<number | null>(null);
 
   useEffect(() => {
     fetch(`/api/bots/${id}/data`)
@@ -31,6 +36,7 @@ export default function ServicesPage() {
     return {
       bot_id: id,
       services: [],
+      categories: [],
       working_hours: {},
       contacts: {},
       faq: [],
@@ -48,6 +54,7 @@ export default function ServicesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           services: data.services,
+          categories: data.categories ?? [],
           working_hours: data.working_hours,
           contacts: data.contacts,
           faq: data.faq,
@@ -64,6 +71,53 @@ export default function ServicesPage() {
 
   if (!data) return <div className="p-8 text-center text-muted text-sm">Yuklanmoqda…</div>;
 
+  function updateService(i: number, patch: Partial<ServiceItem>) {
+    if (!data) return;
+    const next = [...data.services];
+    next[i] = { ...next[i], ...patch };
+    setData({ ...data, services: next });
+  }
+
+  function addService() {
+    if (!data) return;
+    setData({
+      ...data,
+      services: [...data.services, { name: "", price: "", in_stock: true }],
+    });
+    setExpandedItem(data.services.length);
+  }
+
+  function removeService(i: number) {
+    if (!data) return;
+    setData({ ...data, services: data.services.filter((_, j) => j !== i) });
+    if (expandedItem === i) setExpandedItem(null);
+  }
+
+  function addCategory() {
+    if (!data) return;
+    const cats = data.categories ?? [];
+    const name = prompt("Kategoriya nomi (masalan: Ichimliklar, Asosiy taom):");
+    if (!name) return;
+    setData({
+      ...data,
+      categories: [...cats, { id: genId(), name, position: cats.length }],
+    });
+  }
+
+  function removeCategory(catId: string) {
+    if (!data) return;
+    if (!confirm("Kategoriyani o‘chirsangiz, ichidagi mahsulotlar 'Boshqa'ga o‘tadi.")) return;
+    setData({
+      ...data,
+      categories: (data.categories ?? []).filter((c) => c.id !== catId),
+      services: data.services.map((s) =>
+        s.category_id === catId ? { ...s, category_id: undefined } : s
+      ),
+    });
+  }
+
+  const categories = data.categories ?? [];
+
   return (
     <div>
       <Topbar
@@ -76,53 +130,69 @@ export default function ServicesPage() {
         }
       />
       <div className="max-w-3xl mx-auto px-4 py-4 space-y-6">
-        <Section title="Xizmatlar va narxlar">
-          <div className="space-y-2">
-            {data.services.map((s, i) => (
-              <div key={i} className="flex gap-2">
-                <input
-                  className="input flex-1"
-                  placeholder="Xizmat nomi"
-                  value={s.name}
-                  onChange={(e) => {
-                    const next = [...data.services];
-                    next[i] = { ...next[i], name: e.target.value };
-                    setData({ ...data, services: next });
-                  }}
-                />
-                <input
-                  className="input w-32"
-                  placeholder="Narx"
-                  value={s.price}
-                  onChange={(e) => {
-                    const next = [...data.services];
-                    next[i] = { ...next[i], price: e.target.value };
-                    setData({ ...data, services: next });
-                  }}
-                />
-                <button
-                  type="button"
-                  className="btn-ghost !px-3"
-                  onClick={() =>
-                    setData({ ...data, services: data.services.filter((_, j) => j !== i) })
-                  }
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+        {/* Kategoriyalar */}
+        <Section
+          title="Kategoriyalar"
+          subtitle="Mahsulotlarni guruhlash uchun (ixtiyoriy)"
+          right={
             <button
               type="button"
-              className="btn-ghost w-full"
-              onClick={() =>
-                setData({ ...data, services: [...data.services, { name: "", price: "" }] })
-              }
+              onClick={addCategory}
+              className="btn-ghost !py-1 !px-2 !text-xs"
             >
-              + Xizmat qo‘shish
+              + Qo‘shish
+            </button>
+          }
+        >
+          {categories.length === 0 ? (
+            <div className="text-xs text-muted">
+              Kategoriyasiz ham bo‘ladi — barcha mahsulotlar bir ro‘yxatda turaveradi.
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {categories.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center gap-1 px-2 py-1 rounded-full bg-panel border border-border text-xs"
+                >
+                  <span>{c.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeCategory(c.id)}
+                    className="text-muted hover:text-danger ml-1"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+
+        {/* Mahsulotlar/Xizmatlar */}
+        <Section
+          title="Mahsulotlar va xizmatlar"
+          subtitle={`Jami: ${data.services.length}`}
+        >
+          <div className="space-y-2">
+            {data.services.map((s, i) => (
+              <ServiceCard
+                key={i}
+                service={s}
+                categories={categories}
+                expanded={expandedItem === i}
+                onToggle={() => setExpandedItem(expandedItem === i ? null : i)}
+                onChange={(patch) => updateService(i, patch)}
+                onRemove={() => removeService(i)}
+              />
+            ))}
+            <button type="button" className="btn-ghost w-full" onClick={addService}>
+              + Mahsulot/xizmat qo‘shish
             </button>
           </div>
         </Section>
 
+        {/* Ish vaqti */}
         <Section title="Ish vaqti">
           <div className="space-y-2">
             {DAYS.map(([key, label]) => {
@@ -179,6 +249,7 @@ export default function ServicesPage() {
           </div>
         </Section>
 
+        {/* Aloqa */}
         <Section title="Aloqa">
           <div className="space-y-2">
             <input
@@ -202,6 +273,7 @@ export default function ServicesPage() {
           </div>
         </Section>
 
+        {/* FAQ */}
         <Section title="FAQ">
           <div className="space-y-2">
             {data.faq.map((f, i) => (
@@ -249,10 +321,162 @@ export default function ServicesPage() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function ServiceCard({
+  service,
+  categories,
+  expanded,
+  onToggle,
+  onChange,
+  onRemove,
+}: {
+  service: ServiceItem;
+  categories: Category[];
+  expanded: boolean;
+  onToggle: () => void;
+  onChange: (patch: Partial<ServiceItem>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="panel p-3 space-y-2">
+      {/* Compact row */}
+      <div className="flex gap-2 items-center">
+        {service.photo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={service.photo_url}
+            alt=""
+            className="w-12 h-12 rounded-lg object-cover bg-border flex-shrink-0"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        ) : (
+          <div className="w-12 h-12 rounded-lg bg-border flex items-center justify-center flex-shrink-0 text-xl">
+            {service.in_stock === false ? "🚫" : "📦"}
+          </div>
+        )}
+        <input
+          className="input flex-1 !text-sm"
+          placeholder="Mahsulot/xizmat nomi"
+          value={service.name}
+          onChange={(e) => onChange({ name: e.target.value })}
+        />
+        <input
+          className="input w-28 !text-sm"
+          placeholder="Narx"
+          value={service.price}
+          onChange={(e) => onChange({ price: e.target.value })}
+        />
+        <button type="button" className="btn-ghost !px-2 !text-xs" onClick={onToggle}>
+          {expanded ? "▴" : "▾"}
+        </button>
+      </div>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div className="space-y-2 pt-2 border-t border-border">
+          <div>
+            <label className="label">Rasm URL (ixtiyoriy)</label>
+            <input
+              className="input !text-xs"
+              placeholder="https://... yoki Instagram post linki"
+              value={service.photo_url ?? ""}
+              onChange={(e) =>
+                onChange({ photo_url: e.target.value.trim() || undefined })
+              }
+            />
+            <div className="text-[11px] text-muted mt-0.5">
+              💡 Instagram’dagi rasm linkiga o‘ng tugma → "Copy image address"
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Tavsif (ixtiyoriy)</label>
+            <textarea
+              className="input min-h-[60px] !text-sm"
+              placeholder="Mahsulot/xizmat haqida 1-2 jumla. AI mijozga aytishda ishlatadi."
+              value={service.description ?? ""}
+              onChange={(e) =>
+                onChange({ description: e.target.value || undefined })
+              }
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="label">Davomiyligi</label>
+              <input
+                className="input !text-xs"
+                placeholder="masalan: 2 soat, 30 daqiqa"
+                value={service.duration ?? ""}
+                onChange={(e) => onChange({ duration: e.target.value || undefined })}
+              />
+            </div>
+            {categories.length > 0 && (
+              <div className="flex-1">
+                <label className="label">Kategoriya</label>
+                <select
+                  className="input !text-xs"
+                  value={service.category_id ?? ""}
+                  onChange={(e) =>
+                    onChange({ category_id: e.target.value || undefined })
+                  }
+                >
+                  <option value="">— hech qaysi —</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={service.in_stock !== false}
+              onChange={(e) => onChange({ in_stock: e.target.checked })}
+            />
+            Sotuvda bor (mavjud)
+          </label>
+
+          <button
+            type="button"
+            className="text-xs text-danger"
+            onClick={onRemove}
+          >
+            O‘chirish
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Section({
+  title,
+  subtitle,
+  right,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section>
-      <h2 className="text-sm font-semibold mb-2 text-muted uppercase tracking-wider">{title}</h2>
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">
+            {title}
+          </h2>
+          {subtitle && <div className="text-[11px] text-muted">{subtitle}</div>}
+        </div>
+        {right}
+      </div>
       {children}
     </section>
   );

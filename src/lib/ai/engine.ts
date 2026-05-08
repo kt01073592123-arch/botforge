@@ -44,10 +44,30 @@ function buildBusinessContext(bot: BotRow, bd: BotData | null): string {
   lines.push(`BIZNES NOMI: ${bot.business_name ?? bot.name}`);
   if (bot.language) lines.push(`TIL: ${bot.language}`);
   if (bd?.services?.length) {
-    lines.push("\nXIZMATLAR VA NARXLAR:");
+    lines.push("\nMAHSULOTLAR VA XIZMATLAR:");
+    // Kategoriya bo‘yicha guruhlash, agar mavjud bo‘lsa
+    const cats = bd.categories ?? [];
+    const byCat = new Map<string | null, typeof bd.services>();
     for (const s of bd.services) {
-      const dur = s.duration ? ` (${s.duration})` : "";
-      lines.push(`- ${s.name} — ${s.price}${dur}`);
+      const key = s.category_id ?? null;
+      if (!byCat.has(key)) byCat.set(key, []);
+      byCat.get(key)!.push(s);
+    }
+    const sortedCats = [
+      ...cats.sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
+      { id: null, name: "Boshqa" },
+    ];
+    for (const cat of sortedCats) {
+      const items = byCat.get(cat.id as string | null) ?? [];
+      if (items.length === 0) continue;
+      if (cats.length > 0 && cat.id !== null) lines.push(`\n[${cat.name}]`);
+      for (const s of items) {
+        const dur = s.duration ? ` (${s.duration})` : "";
+        const desc = s.description ? ` — ${s.description}` : "";
+        const stockMark = s.in_stock === false ? " [HOZIR YO‘Q]" : "";
+        const photoMark = s.photo_url ? " [rasmi bor]" : "";
+        lines.push(`- ${s.name} — ${s.price}${dur}${desc}${stockMark}${photoMark}`);
+      }
     }
   }
   if (bd?.working_hours && Object.keys(bd.working_hours).length) {
