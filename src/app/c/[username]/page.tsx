@@ -264,32 +264,32 @@ export default function CustomerWebApp() {
   const gradient =
     bk.gradient ?? `linear-gradient(135deg, ${primary} 0%, ${accent} 100%)`;
   const textOnPrimary = bk.text_on_primary ?? "#fff";
-  // Mini App fonini har doim qora gradientga aylantiramiz — yorug' brand
-  // tint'da oq matn ko'rinmaydi. Aurora effektlar primary/accent bilan
-  // brand rangini saqlab qoladi.
-  const darkBase = `linear-gradient(180deg, #0F0E1A 0%, #1A1426 50%, #0A0814 100%)`;
+  // Light theme: brand tint asosida soft cream/pushti fon, lekin to'q matn.
+  // Brand pushtilik aurora va gradient'lar orqali saqlanadi.
+  const lightBase = `linear-gradient(180deg, #FFFBFD 0%, #FFF0F5 60%, #FFE4EC 100%)`;
 
   // ==========================================================================
   // RENDER
   // ==========================================================================
   return (
     <div
-      className="min-h-screen pb-28 relative overflow-x-hidden text-white"
+      className="min-h-screen pb-28 relative overflow-x-hidden"
       style={{
-        background: darkBase,
+        background: lightBase,
+        color: "#1A1B2E",
         paddingTop: "max(env(safe-area-inset-top), 0.75rem)",
       }}
     >
-      {/* Aurora background */}
-      <AuroraBg primary={primary} accent={accent} />
+      {/* Aurora background — light theme'da juda nozik */}
+      <AuroraBgLight primary={primary} accent={accent} />
 
       {/* Header */}
       <header className="relative px-4 pt-5 pb-4 z-10">
         <div className="flex items-center gap-3 mb-3">
           <button
             onClick={() => setDrawerOpen(true)}
-            className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl backdrop-blur-md transition active:scale-95"
-            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}
+            className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl bg-white shadow-sm transition active:scale-95"
+            style={{ border: "1px solid rgba(0,0,0,0.06)", color: "#1A1B2E" }}
             aria-label="Menu"
           >
             ☰
@@ -306,11 +306,11 @@ export default function CustomerWebApp() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="font-extrabold text-base tracking-tight truncate">
+            <div className="font-extrabold text-base tracking-tight truncate" style={{ color: "#1A1B2E" }}>
               {data.business_name}
             </div>
             {data.description && (
-              <div className="text-[11px] opacity-70 truncate">
+              <div className="text-[11px] truncate" style={{ color: "#6B6B7B" }}>
                 {data.description}
               </div>
             )}
@@ -319,30 +319,24 @@ export default function CustomerWebApp() {
           {reviewsBundle.count > 0 && (
             <button
               onClick={() => setTab("home")}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold backdrop-blur-md"
-              style={{
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.12)",
-              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-white shadow-sm"
+              style={{ border: "1px solid rgba(0,0,0,0.06)", color: "#1A1B2E" }}
             >
               <span>⭐</span>
               <span>{reviewsBundle.avg_rating.toFixed(1)}</span>
-              <span className="opacity-60">({reviewsBundle.count})</span>
+              <span style={{ color: "#9B9BAB" }}>({reviewsBundle.count})</span>
             </button>
           )}
         </div>
 
-        {/* Contact pills (glass) */}
+        {/* Contact pills */}
         {(data.contacts?.phone || data.contacts?.address) && (
           <div className="flex flex-wrap gap-2">
             {data.contacts?.phone && (
               <a
                 href={`tel:${data.contacts.phone}`}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-md transition active:scale-95"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white shadow-sm transition active:scale-95"
+                style={{ border: "1px solid rgba(0,0,0,0.06)", color: "#1A1B2E" }}
               >
                 <span>📞</span>
                 <span>{data.contacts.phone}</span>
@@ -350,11 +344,8 @@ export default function CustomerWebApp() {
             )}
             {data.contacts?.address && (
               <div
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-md max-w-[200px]"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white shadow-sm max-w-[200px]"
+                style={{ border: "1px solid rgba(0,0,0,0.06)", color: "#1A1B2E" }}
               >
                 <span>📍</span>
                 <span className="truncate">{data.contacts.address}</span>
@@ -500,21 +491,21 @@ export default function CustomerWebApp() {
 }
 
 // ==========================================================================
-// AURORA BACKGROUND - subtle animated mesh gradient
+// AURORA BACKGROUND - light theme'da nozik blob effekti
 // ==========================================================================
-function AuroraBg({ primary, accent }: { primary: string; accent: string }) {
+function AuroraBgLight({ primary, accent }: { primary: string; accent: string }) {
   return (
     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
       <div
-        className="absolute -top-40 -left-32 w-[500px] h-[500px] rounded-full opacity-40 blur-3xl"
+        className="absolute -top-40 -left-32 w-[420px] h-[420px] rounded-full opacity-25 blur-3xl"
         style={{ background: primary, animation: "auroraFloat 20s ease-in-out infinite" }}
       />
       <div
-        className="absolute top-1/3 -right-48 w-[600px] h-[600px] rounded-full opacity-30 blur-3xl"
+        className="absolute top-1/3 -right-40 w-[480px] h-[480px] rounded-full opacity-20 blur-3xl"
         style={{ background: accent, animation: "auroraFloat 25s ease-in-out infinite reverse" }}
       />
       <div
-        className="absolute bottom-0 left-1/3 w-[420px] h-[420px] rounded-full opacity-35 blur-3xl"
+        className="absolute bottom-10 left-1/4 w-[360px] h-[360px] rounded-full opacity-15 blur-3xl"
         style={{
           background: `linear-gradient(135deg, ${primary}, ${accent})`,
           animation: "auroraFloat 30s ease-in-out infinite",
@@ -562,19 +553,17 @@ function HomeTab(props: {
       {/* Search */}
       <div className="px-4 pt-2">
         <div
-          className="flex items-center gap-2 px-4 py-3 rounded-2xl backdrop-blur-md"
-          style={{
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.1)",
-          }}
+          className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white shadow-sm"
+          style={{ border: "1px solid rgba(0,0,0,0.06)" }}
         >
-          <span className="text-base opacity-60">🔍</span>
+          <span className="text-base" style={{ color: "#9B9BAB" }}>🔍</span>
           <input
             type="text"
             placeholder="Qidirish..."
             value={props.searchQuery}
             onChange={(e) => props.setSearchQuery(e.target.value)}
-            className="flex-1 bg-transparent outline-none text-sm placeholder:text-white/40"
+            className="flex-1 bg-transparent outline-none text-sm placeholder:text-gray-400"
+            style={{ color: "#1A1B2E" }}
           />
         </div>
       </div>
@@ -593,7 +582,7 @@ function HomeTab(props: {
                   style={
                     active
                       ? { background: props.gradient, color: "#fff", boxShadow: `0 8px 20px ${props.primary}55` }
-                      : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }
+                      : { background: "#FFFFFF", color: "#1A1B2E", border: "1px solid rgba(0,0,0,0.06)" }
                   }
                 >
                   {"icon" in c && c.icon ? `${c.icon} ` : ""}
@@ -609,11 +598,11 @@ function HomeTab(props: {
       {props.reviewsBundle.reviews.length > 0 && (
         <div className="mt-5">
           <div className="px-4 mb-2 flex items-center justify-between">
-            <h3 className="text-sm font-bold tracking-tight">
+            <h3 className="text-sm font-bold tracking-tight" style={{ color: "#1A1B2E" }}>
               Mijozlarimiz fikrlari{" "}
-              <span style={{ color: props.accent }}>⭐</span>
+              <span style={{ color: props.primary }}>⭐</span>
             </h3>
-            <span className="text-[11px] opacity-60">
+            <span className="text-[11px]" style={{ color: "#6B6B7B" }}>
               {props.reviewsBundle.avg_rating.toFixed(1)} / 5
             </span>
           </div>
@@ -687,8 +676,8 @@ function ReviewChip({
     <div
       className="min-w-[200px] max-w-[240px] rounded-2xl p-3 backdrop-blur-md"
       style={{
-        background: "rgba(255,255,255,0.05)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        background: "#FFFFFF",
+        border: "1px solid rgba(0,0,0,0.06)",
       }}
     >
       <div className="flex items-center gap-2 mb-1.5">
@@ -702,17 +691,17 @@ function ReviewChip({
           {initial}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-semibold truncate">
+          <div className="text-xs font-semibold truncate" style={{ color: "#1A1B2E" }}>
             {review.customer_name ?? "Mijoz"}
           </div>
-          <div className="text-[10px]" style={{ color: accent }}>
+          <div className="text-[10px]" style={{ color: "#F59E0B" }}>
             {"★".repeat(review.rating)}
-            <span className="opacity-30">{"★".repeat(5 - review.rating)}</span>
+            <span style={{ color: "#E5E5EA" }}>{"★".repeat(5 - review.rating)}</span>
           </div>
         </div>
       </div>
       {review.text && (
-        <div className="text-[11px] opacity-80 line-clamp-3 leading-relaxed">
+        <div className="text-[11px] line-clamp-3 leading-relaxed" style={{ color: "#6B6B7B" }}>
           &ldquo;{review.text}&rdquo;
         </div>
       )}
@@ -751,12 +740,12 @@ function ProductCard({
   const out = service.in_stock === false;
   return (
     <div
-      className={`group rounded-2xl overflow-hidden relative transition ${
+      className={`group rounded-2xl overflow-hidden relative transition shadow-sm ${
         out ? "opacity-50" : "active:scale-[0.98]"
       }`}
       style={{
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)",
+        background: "#FFFFFF",
+        border: "1px solid rgba(0,0,0,0.06)",
       }}
     >
       {/* Photo */}
@@ -804,11 +793,11 @@ function ProductCard({
 
       {/* Info */}
       <div className="p-2.5 space-y-1.5">
-        <div className="text-sm font-semibold leading-tight line-clamp-2 min-h-[2.4em]">
+        <div className="text-sm font-semibold leading-tight line-clamp-2 min-h-[2.4em]" style={{ color: "#1A1B2E" }}>
           {service.name}
         </div>
         {service.description && (
-          <div className="text-[10px] opacity-60 line-clamp-1">
+          <div className="text-[10px] line-clamp-1" style={{ color: "#9B9BAB" }}>
             {service.description}
           </div>
         )}
@@ -986,16 +975,13 @@ function OrderCard({
   const date = new Date(order.created_at);
   return (
     <div
-      className="rounded-2xl p-3.5 backdrop-blur-md"
-      style={{
-        background: "rgba(255,255,255,0.05)",
-        border: "1px solid rgba(255,255,255,0.1)",
-      }}
+      className="rounded-2xl p-3.5 bg-white shadow-sm"
+      style={{ border: "1px solid rgba(0,0,0,0.06)" }}
     >
       <div className="flex items-center justify-between mb-2">
         <div>
-          <div className="text-[11px] opacity-60">{displayId}</div>
-          <div className="text-[10px] opacity-50">
+          <div className="text-[11px] font-semibold" style={{ color: "#6B6B7B" }}>{displayId}</div>
+          <div className="text-[10px]" style={{ color: "#9B9BAB" }}>
             {date.toLocaleDateString("uz-UZ")} · {date.toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })}
           </div>
         </div>
@@ -1009,7 +995,7 @@ function OrderCard({
       </div>
       <div className="space-y-0.5 mb-2">
         {order.items.slice(0, 3).map((it, i) => (
-          <div key={i} className="text-xs flex justify-between gap-2 opacity-80">
+          <div key={i} className="text-xs flex justify-between gap-2" style={{ color: "#1A1B2E" }}>
             <span className="truncate">
               • {it.name} × {it.qty}
             </span>
@@ -1017,7 +1003,7 @@ function OrderCard({
           </div>
         ))}
         {order.items.length > 3 && (
-          <div className="text-[10px] opacity-50">
+          <div className="text-[10px]" style={{ color: "#9B9BAB" }}>
             ... va yana {order.items.length - 3} ta
           </div>
         )}
@@ -1112,18 +1098,15 @@ function ProfileTab({
     <div className="px-4 mt-4 space-y-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2">
-        <StatCard label="Buyurtmalar" value={String(profile?.total_orders ?? 0)} accent={accent} />
-        <StatCard label="Sarflandi" value={`${((profile?.total_spent_uzs ?? 0) / 1000).toFixed(0)}k`} accent={accent} />
-        <StatCard label="Bonus" value={String(profile?.loyalty_points ?? 0)} accent={accent} />
+        <StatCard label="Buyurtmalar" value={String(profile?.total_orders ?? 0)} primary={primary} />
+        <StatCard label="Sarflandi" value={`${((profile?.total_spent_uzs ?? 0) / 1000).toFixed(0)}k`} primary={primary} />
+        <StatCard label="Bonus" value={String(profile?.loyalty_points ?? 0)} primary={primary} />
       </div>
 
       {/* Form */}
       <div
-        className="rounded-2xl p-4 space-y-3 backdrop-blur-md"
-        style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.1)",
-        }}
+        className="rounded-2xl p-4 space-y-3 bg-white shadow-sm"
+        style={{ border: "1px solid rgba(0,0,0,0.06)" }}
       >
         <Field
           label="Ism"
@@ -1143,8 +1126,8 @@ function ProfileTab({
         <button
           onClick={save}
           disabled={saving}
-          className="w-full py-3 rounded-xl font-bold text-sm transition active:scale-95 disabled:opacity-50"
-          style={{ background: gradient, color: "#fff" }}
+          className="w-full py-3 rounded-xl font-bold text-sm transition active:scale-95 disabled:opacity-50 shadow-md"
+          style={{ background: gradient, color: "#fff", boxShadow: `0 8px 20px ${primary}55` }}
         >
           {saving ? "Saqlanmoqda..." : saved ? "✓ Saqlandi" : "💾 Saqlash"}
         </button>
@@ -1153,19 +1136,16 @@ function ProfileTab({
   );
 }
 
-function StatCard({ label, value, accent }: { label: string; value: string; accent: string }) {
+function StatCard({ label, value, primary }: { label: string; value: string; primary: string }) {
   return (
     <div
-      className="rounded-2xl p-3 text-center backdrop-blur-md"
-      style={{
-        background: "rgba(255,255,255,0.05)",
-        border: "1px solid rgba(255,255,255,0.1)",
-      }}
+      className="rounded-2xl p-3 text-center bg-white shadow-sm"
+      style={{ border: "1px solid rgba(0,0,0,0.06)" }}
     >
-      <div className="text-lg font-extrabold tracking-tight" style={{ color: accent }}>
+      <div className="text-xl font-extrabold tracking-tight" style={{ color: primary }}>
         {value}
       </div>
-      <div className="text-[10px] opacity-60 mt-0.5">{label}</div>
+      <div className="text-[10px] mt-0.5" style={{ color: "#6B6B7B" }}>{label}</div>
     </div>
   );
 }
@@ -1187,21 +1167,19 @@ function Field({
 }) {
   return (
     <div>
-      <div className="text-[11px] opacity-60 mb-1 ml-1">{label}</div>
+      <div className="text-[11px] mb-1 ml-1 font-medium" style={{ color: "#6B6B7B" }}>{label}</div>
       <div
         className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
-        style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.08)",
-        }}
+        style={{ background: "#FAFAFC", border: "1px solid rgba(0,0,0,0.08)" }}
       >
-        {icon && <span className="text-sm opacity-70">{icon}</span>}
+        {icon && <span className="text-sm" style={{ color: "#9B9BAB" }}>{icon}</span>}
         <input
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 bg-transparent outline-none text-sm placeholder:text-white/30"
+          className="flex-1 bg-transparent outline-none text-sm"
+          style={{ color: "#1A1B2E" }}
         />
       </div>
     </div>
@@ -1262,37 +1240,31 @@ function ReferTab({
         <StatCard
           label="Taklif qilindi"
           value={`${info.referrals_completed}/${info.referrals_count}`}
-          accent={accent}
+          primary={primary}
         />
         <StatCard
           label="Bonus to'plandi"
           value={`${(info.bonus_balance_uzs / 1000).toFixed(0)}k`}
-          accent={accent}
+          primary={primary}
         />
       </div>
 
       {/* Link */}
       <div
-        className="rounded-2xl p-4 space-y-2.5 backdrop-blur-md"
-        style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.1)",
-        }}
+        className="rounded-2xl p-4 space-y-2.5 bg-white shadow-sm"
+        style={{ border: "1px solid rgba(0,0,0,0.06)" }}
       >
-        <div className="text-[11px] opacity-60">Sizning havola</div>
+        <div className="text-[11px] font-medium" style={{ color: "#6B6B7B" }}>Sizning havola</div>
         <div
           className="text-xs font-mono truncate p-2 rounded-lg"
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-          }}
+          style={{ background: "#FAFAFC", border: "1px solid rgba(0,0,0,0.08)", color: "#1A1B2E" }}
         >
           {info.referral_link}
         </div>
         <button
           onClick={copyLink}
-          className="w-full py-2.5 rounded-xl font-bold text-sm transition active:scale-95"
-          style={{ background: gradient, color: "#fff" }}
+          className="w-full py-2.5 rounded-xl font-bold text-sm transition active:scale-95 shadow-md"
+          style={{ background: gradient, color: "#fff", boxShadow: `0 8px 20px ${primary}55` }}
         >
           {copied ? "✓ Nusxalandi" : "🔗 Havolani nusxa olish"}
         </button>
@@ -1329,16 +1301,14 @@ function BottomNav({
     <nav
       className="fixed bottom-0 left-0 right-0 z-20 px-3 pb-3 pt-2"
       style={{
-        background: "linear-gradient(to top, rgba(0,0,0,0.6), transparent)",
-        backdropFilter: "blur(20px)",
+        background:
+          "linear-gradient(to top, rgba(255,255,255,0.95) 50%, rgba(255,255,255,0))",
+        backdropFilter: "blur(12px)",
       }}
     >
       <div
-        className="flex items-center justify-between rounded-3xl px-1 py-1 backdrop-blur-2xl"
-        style={{
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.1)",
-        }}
+        className="flex items-center justify-between rounded-3xl px-1 py-1 bg-white shadow-lg"
+        style={{ border: "1px solid rgba(0,0,0,0.06)" }}
       >
         {items.map((it) => {
           const active = tab === it.id;
@@ -1352,9 +1322,9 @@ function BottomNav({
                   ? {
                       background: `linear-gradient(135deg, ${primary}, ${accent})`,
                       color: "#fff",
-                      boxShadow: `0 8px 16px ${primary}55`,
+                      boxShadow: `0 6px 14px ${primary}55`,
                     }
-                  : { color: "rgba(255,255,255,0.6)" }
+                  : { color: "#6B6B7B" }
               }
             >
               <span className="text-lg">{it.icon}</span>
@@ -1400,27 +1370,23 @@ function Drawer({
       <div
         onClick={onClose}
         className="absolute inset-0"
-        style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
+        style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
       />
       <div
-        className="absolute left-0 top-0 bottom-0 w-[78%] max-w-[320px] p-4 overflow-y-auto"
-        style={{
-          background: "rgba(15,15,20,0.85)",
-          backdropFilter: "blur(20px)",
-          borderRight: "1px solid rgba(255,255,255,0.1)",
-        }}
+        className="absolute left-0 top-0 bottom-0 w-[78%] max-w-[320px] p-4 overflow-y-auto bg-white"
+        style={{ borderRight: "1px solid rgba(0,0,0,0.06)", color: "#1A1B2E" }}
       >
         {/* Brand */}
-        <div className="flex items-center gap-3 mb-5 pb-4 border-b border-white/10">
+        <div className="flex items-center gap-3 mb-5 pb-4" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
           <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+            className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-md"
             style={{ background: gradient }}
           >
             {data.icon}
           </div>
           <div className="flex-1">
             <div className="font-extrabold text-base">{data.business_name}</div>
-            <div className="text-[10px] opacity-60">@{data.bot_username}</div>
+            <div className="text-[10px]" style={{ color: "#9B9BAB" }}>@{data.bot_username}</div>
           </div>
         </div>
 
@@ -1435,8 +1401,8 @@ function Drawer({
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition active:scale-[0.98]"
                 style={
                   active
-                    ? { background: gradient, color: "#fff" }
-                    : { background: "transparent", color: "rgba(255,255,255,0.7)" }
+                    ? { background: gradient, color: "#fff", boxShadow: `0 4px 12px ${primary}40` }
+                    : { background: "transparent", color: "#1A1B2E" }
                 }
               >
                 <span className="text-lg">{it.icon}</span>
@@ -1448,21 +1414,22 @@ function Drawer({
 
         {/* Contacts */}
         {(data.contacts?.phone || data.contacts?.address || data.contacts?.instagram) && (
-          <div className="mt-5 pt-4 border-t border-white/10">
-            <div className="text-[10px] opacity-60 uppercase tracking-wider mb-2 px-1">
+          <div className="mt-5 pt-4" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
+            <div className="text-[10px] uppercase tracking-wider mb-2 px-1 font-semibold" style={{ color: "#9B9BAB" }}>
               Aloqa
             </div>
             <div className="space-y-1">
               {data.contacts?.phone && (
                 <a
                   href={`tel:${data.contacts.phone}`}
-                  className="block px-3 py-2 rounded-lg text-xs hover:bg-white/5"
+                  className="block px-3 py-2 rounded-lg text-xs"
+                  style={{ color: "#1A1B2E" }}
                 >
                   📞 {data.contacts.phone}
                 </a>
               )}
               {data.contacts?.address && (
-                <div className="px-3 py-2 rounded-lg text-xs opacity-80">
+                <div className="px-3 py-2 rounded-lg text-xs" style={{ color: "#6B6B7B" }}>
                   📍 {data.contacts.address}
                 </div>
               )}
@@ -1471,7 +1438,8 @@ function Drawer({
                   href={`https://instagram.com/${data.contacts.instagram.replace("@", "")}`}
                   target="_blank"
                   rel="noopener"
-                  className="block px-3 py-2 rounded-lg text-xs hover:bg-white/5"
+                  className="block px-3 py-2 rounded-lg text-xs"
+                  style={{ color: "#1A1B2E" }}
                 >
                   📷 {data.contacts.instagram}
                 </a>
@@ -1481,7 +1449,7 @@ function Drawer({
         )}
 
         {/* Powered by */}
-        <div className="absolute bottom-4 left-4 right-4 text-center text-[9px] opacity-30">
+        <div className="absolute bottom-4 left-4 right-4 text-center text-[9px]" style={{ color: "#C5C5D2" }}>
           Powered by BotForge
         </div>
       </div>
@@ -1565,29 +1533,25 @@ function CartModal({
         style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
       />
       <div
-        className="relative w-full max-h-[88vh] rounded-t-3xl overflow-y-auto"
-        style={{
-          background: "rgba(15,15,20,0.95)",
-          backdropFilter: "blur(20px)",
-          borderTop: "1px solid rgba(255,255,255,0.15)",
-        }}
+        className="relative w-full max-h-[88vh] rounded-t-3xl overflow-y-auto bg-white"
+        style={{ borderTop: "1px solid rgba(0,0,0,0.06)", color: "#1A1B2E" }}
       >
         {/* Drag handle */}
-        <div className="sticky top-0 pt-3 pb-2 flex justify-center bg-inherit">
-          <div className="w-10 h-1 rounded-full bg-white/20" />
+        <div className="sticky top-0 pt-3 pb-2 flex justify-center bg-white">
+          <div className="w-10 h-1 rounded-full" style={{ background: "rgba(0,0,0,0.15)" }} />
         </div>
 
         {done ? (
           <div className="p-8 text-center">
             <div className="text-6xl mb-3">✅</div>
             <div className="font-bold text-lg">Buyurtma qabul qilindi!</div>
-            <div className="text-xs opacity-70 mt-1">Tez orada admin bog&apos;lanadi</div>
+            <div className="text-xs mt-1" style={{ color: "#6B6B7B" }}>Tez orada admin bog&apos;lanadi</div>
           </div>
         ) : step === "cart" ? (
           <>
             <div className="px-4 py-2 flex items-center justify-between">
               <h2 className="font-extrabold text-lg">🛒 Savat</h2>
-              <button onClick={onClear} className="text-[11px] opacity-60 hover:opacity-100">
+              <button onClick={onClear} className="text-[11px]" style={{ color: "#6B6B7B" }}>
                 Tozalash
               </button>
             </div>
@@ -1596,10 +1560,7 @@ function CartModal({
                 <div
                   key={c.product_id}
                   className="flex items-center gap-2.5 p-2 rounded-xl"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                  }}
+                  style={{ background: "#FAFAFC", border: "1px solid rgba(0,0,0,0.06)" }}
                 >
                   <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
                     {c.service.photo_url ? (
@@ -1616,14 +1577,11 @@ function CartModal({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-semibold truncate">{c.service.name}</div>
-                    <div className="text-[11px] opacity-70">{c.service.price}</div>
+                    <div className="text-[11px]" style={{ color: "#6B6B7B" }}>{c.service.price}</div>
                   </div>
                   <div
                     className="flex items-center gap-2 rounded-full px-1"
-                    style={{
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                    }}
+                    style={{ background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)" }}
                   >
                     <button onClick={() => onUpdate(c.product_id, -1)} className="w-7 h-7">
                       −
@@ -1636,9 +1594,9 @@ function CartModal({
                 </div>
               ))}
             </div>
-            <div className="p-4 sticky bottom-0 bg-inherit space-y-2">
+            <div className="p-4 sticky bottom-0 bg-white space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs opacity-70">Jami:</span>
+                <span className="text-xs" style={{ color: "#6B6B7B" }}>Jami:</span>
                 <span
                   className="text-xl font-extrabold"
                   style={{
@@ -1683,44 +1641,37 @@ function CartModal({
                 type="tel"
               />
               <div>
-                <div className="text-[11px] opacity-60 mb-1 ml-1">Izoh</div>
+                <div className="text-[11px] mb-1 ml-1 font-medium" style={{ color: "#6B6B7B" }}>Izoh</div>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Yetkazib berish manzili, qo'shimcha ma'lumot..."
                   rows={3}
-                  className="w-full px-3 py-2.5 rounded-xl text-sm resize-none outline-none placeholder:text-white/30"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    color: "#fff",
-                  }}
+                  className="w-full px-3 py-2.5 rounded-xl text-sm resize-none outline-none placeholder:text-gray-400"
+                  style={{ background: "#FAFAFC", border: "1px solid rgba(0,0,0,0.08)", color: "#1A1B2E" }}
                 />
               </div>
               <div
                 className="rounded-xl p-3 mt-3"
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                }}
+                style={{ background: "#FAFAFC", border: "1px solid rgba(0,0,0,0.08)" }}
               >
-                <div className="text-[11px] opacity-60 mb-1">Buyurtma:</div>
+                <div className="text-[11px] mb-1 font-medium" style={{ color: "#6B6B7B" }}>Buyurtma:</div>
                 <div className="text-xs space-y-0.5">
                   {cart.slice(0, 4).map((c, i) => (
                     <div key={i} className="flex justify-between gap-2">
-                      <span className="truncate opacity-80">
+                      <span className="truncate" style={{ color: "#1A1B2E" }}>
                         {c.service.name} × {c.qty}
                       </span>
-                      <span className="opacity-90">{c.service.price}</span>
+                      <span style={{ color: "#1A1B2E" }}>{c.service.price}</span>
                     </div>
                   ))}
                   {cart.length > 4 && (
-                    <div className="text-[10px] opacity-50">
+                    <div className="text-[10px]" style={{ color: "#9B9BAB" }}>
                       ... va yana {cart.length - 4} ta
                     </div>
                   )}
                 </div>
-                <div className="flex justify-between mt-2 pt-2 border-t border-white/10">
+                <div className="flex justify-between mt-2 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
                   <span className="text-xs font-bold">Jami:</span>
                   <span
                     className="font-extrabold"
@@ -1765,18 +1716,22 @@ function EmptyState({
 }) {
   return (
     <div className="text-center py-12">
-      <div className="text-5xl mb-3 opacity-50">{emoji}</div>
-      <div className="font-bold text-sm">{title}</div>
-      {subtitle && <div className="text-xs opacity-60 mt-1 max-w-[280px] mx-auto">{subtitle}</div>}
+      <div className="text-5xl mb-3 opacity-60">{emoji}</div>
+      <div className="font-bold text-sm" style={{ color: "#1A1B2E" }}>{title}</div>
+      {subtitle && (
+        <div className="text-xs mt-1 max-w-[280px] mx-auto" style={{ color: "#6B6B7B" }}>
+          {subtitle}
+        </div>
+      )}
     </div>
   );
 }
 
 function SkeletonShell() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0c10] text-white/60">
-      <div className="w-16 h-16 rounded-3xl bg-white/5 animate-pulse mb-3" />
-      <div className="text-xs opacity-60">Yuklanmoqda...</div>
+    <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: "#FFFBFD", color: "#9B9BAB" }}>
+      <div className="w-16 h-16 rounded-3xl animate-pulse mb-3" style={{ background: "rgba(0,0,0,0.05)" }} />
+      <div className="text-xs">Yuklanmoqda...</div>
     </div>
   );
 }
