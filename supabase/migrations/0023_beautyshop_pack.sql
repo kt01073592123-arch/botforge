@@ -34,7 +34,7 @@ QOIDALAR:
 Sening biznesing ma'lumoti pastda BUSINESS_CONTEXT bo'limida.$p$,
   'Assalomu alaykum! 💄 Beauty do''konimizga xush kelibsiz. Mahsulotlar uchun "Do''kon (Mini App)" tugmasini bosing, teri/yuz parvarishi bo''yicha maslahat olishni xohlasangiz savol yozing.',
   '[
-    {"text":"🛒 Do''kon (Mini App)"},
+    {"text":"🛒 Do''kon (Mini App)","web_app":true},
     {"text":"🤖 AI Maslahat"},
     {"text":"🔗 Do''stni taklif qilish"},
     {"text":"📞 Sotuvchi bilan aloqa"},

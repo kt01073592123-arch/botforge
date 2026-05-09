@@ -167,13 +167,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ username: stri
     request: requestText,
   });
 
-  // Admin Telegram’ga xabar
-  if (bot.admin_chat_id) {
+  // Admin Telegram'ga xabar — BeautyShop pattern: inline tugmalar bilan
+  // (✅ Qabul qildim / ❌ Bekor / 💬 Mijozga yozish). Status o'zgargan sayin
+  // tugmalar yangilanadi (runtime callbacks bilan).
+  if (bot.admin_chat_id && orderId) {
     try {
       const token = await getBotToken(bot.id);
       const tg = new TgBot(token);
+      const displayId = `ORD-${orderId.slice(-6).toUpperCase()}`;
       const adminLines = [
         "🛒 <b>Yangi WebApp buyurtmasi</b>",
+        `🆔 ${displayId}`,
+        "📊 Status: <b>Yangi</b>",
         "",
         `Ism: ${escapeHtml(body.customer_name ?? "—")}`,
         `Tel: <code>${escapeHtml(body.customer_phone)}</code>`,
@@ -186,15 +191,30 @@ export async function POST(req: Request, ctx: { params: Promise<{ username: stri
           (it) => `• ${escapeHtml(it.name)} × ${it.qty} = ${escapeHtml(it.price)}`
         ),
         "",
-        `<b>JAMI: ${body.total_uzs.toLocaleString("uz-UZ")} so‘m</b>`,
+        `<b>JAMI: ${body.total_uzs.toLocaleString("uz-UZ")} so'm</b>`,
         "",
         body.note ? `Izoh: ${escapeHtml(body.note)}` : "",
       ]
         .filter(Boolean)
         .join("\n");
-      await tg.sendMessage(bot.admin_chat_id, adminLines);
+
+      const inlineKeyboard: { text: string; callback_data?: string; url?: string }[][] = [
+        [
+          { text: "✅ Qabul qildim", callback_data: `order_accept_${orderId}` },
+          { text: "❌ Bekor", callback_data: `order_cancel_${orderId}` },
+        ],
+      ];
+      if (tgUser?.id) {
+        inlineKeyboard.push([
+          { text: "💬 Mijozga yozish", url: `tg://user?id=${tgUser.id}` },
+        ]);
+      }
+
+      await tg.sendMessage(bot.admin_chat_id, adminLines, {
+        reply_markup: { inline_keyboard: inlineKeyboard },
+      });
     } catch {
-      // Admin xabari xato bo‘lsa ham buyurtma qabul qilingan
+      // Admin xabari xato bo'lsa ham buyurtma qabul qilingan
     }
   }
 

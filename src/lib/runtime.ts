@@ -1,6 +1,4 @@
-// Telegram update'ni qayta ishlovchi runtime — bot uchun universal.
-// Sprint 1: multi-turn AI engine + tool effects + customer memory.
-// Sprint 2: voice (Whisper) + photo (Vision) input.
+// Telegram update'ni qayta ishlovchi runtime - bot uchun universal.
 
 import { db } from "./supabase/server";
 import { TgBot } from "./telegram";
@@ -10,15 +8,49 @@ import { rateLimit } from "./ratelimit";
 import { alertOwner } from "./alerts";
 import { touchProfile } from "./customer_memory";
 import { transcribeVoice, describePhoto } from "./ai/multimodal";
+import { env } from "./env";
 import type { BotRow, ConversationRow, MessageRow } from "./supabase/types";
 import type { TgUpdate, TgMessage, TgCallbackQuery } from "./telegram";
 
-function buildKeyboard(buttons: string[]) {
+// Yangi format: tugma {text, web_app?, url?} bo'lishi mumkin.
+// Eski format: faqat string. Ikkalasi ham qo'llab-quvvatlanadi.
+type BotButton = string | { text: string; web_app?: boolean; url?: string };
+
+// Telegram reply keyboard tugmalarini quradi. Agar tugma web_app:true bo'lsa,
+// haqiqiy Mini App (web_app: {url}) sifatida chiqadi - bot ichida ochiladi.
+function buildKeyboard(buttons: BotButton[], bot?: BotRow) {
   if (buttons.length === 0) return undefined;
-  const rows = [
-    ...buttons.map((t) => [{ text: t }]),
-    [{ text: "📞 Telefon raqamimni yuborish", request_contact: true }],
-  ];
+  const baseUrl = env().NEXT_PUBLIC_APP_URL;
+  const defaultMiniAppUrl = bot?.tg_username
+    ? `${baseUrl}/c/${bot.tg_username}`
+    : null;
+
+  const rows: {
+    text: string;
+    web_app?: { url: string };
+    request_contact?: boolean;
+  }[][] = [];
+  for (const b of buttons) {
+    if (typeof b === "string") {
+      rows.push([{ text: b }]);
+      continue;
+    }
+    if (b.web_app) {
+      const url = b.url
+        ? b.url.startsWith("http")
+          ? b.url
+          : `${baseUrl}${b.url.startsWith("/") ? "" : "/"}${b.url}`
+        : defaultMiniAppUrl;
+      if (url) {
+        rows.push([{ text: b.text, web_app: { url } }]);
+      } else {
+        rows.push([{ text: b.text }]);
+      }
+    } else {
+      rows.push([{ text: b.text }]);
+    }
+  }
+  rows.push([{ text: "📞 Telefon raqamimni yuborish", request_contact: true }]);
   return { keyboard: rows, resize_keyboard: true };
 }
 
@@ -41,7 +73,6 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
   const msg = update.message ?? update.edited_message;
   if (!msg) return;
 
-  // ─── Inputni tushunish (text / voice / photo / contact) ───────────────
   let text = (msg.text ?? "").trim();
   const isVoice = !!msg.voice || !!msg.audio;
   const isPhoto = !!msg.photo && msg.photo.length > 0;
@@ -67,7 +98,6 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
 
   const conv = await getOrCreateConversation(bot.id, msg);
 
-  // Customer profile — touch (counters, last_seen)
   if (msg.from?.id) {
     await touchProfile({
       botId: bot.id,
@@ -79,12 +109,11 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
     }).catch(() => {});
   }
 
-  // /start — welcome
   if (text === "/start") {
     if (bot.welcome_message) {
       const buttons = await getDefaultButtons(bot);
       await tg.sendMessage(msg.chat.id, bot.welcome_message, {
-        reply_markup: buildKeyboard(buttons),
+        reply_markup: buildKeyboard(buttons, bot),
       });
       await sb.from("messages").insert({
         conversation_id: conv.id,
@@ -96,13 +125,12 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
     return;
   }
 
-  // ─── Voice / Photo → matn ────────────────────────────────────────────
   if (isVoice && !text) {
     try {
       const fileId = msg.voice?.file_id ?? msg.audio?.file_id;
       if (fileId) {
         const transcript = await transcribeVoice(token, fileId);
-        text = transcript || "[Ovozli xabar — matnga aylantirib bo'lmadi]";
+        text = transcript || "[Ovozli xabar - matnga aylantirib bo'lmadi]";
       }
     } catch (e) {
       console.error("[voice]", (e as Error).message);
@@ -121,7 +149,6 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
     }
   }
 
-  // Contact
   let userText = text;
   if (msg.contact) {
     userText = `[Mijoz telefon yubordi: ${msg.contact.phone_number}]`;
@@ -207,7 +234,7 @@ async function handleCallback(bot: BotRow, cb: TgCallbackQuery) {
     await sb.from("conversations").update({ status: "waiting_human" }).eq("id", conv.id);
     await tg.sendMessage(
       cb.message.chat.id,
-      "Operator chaqirildi. Tez orada javob beramiz 🙏"
+      "Operator chaqirildi. Tez orada javob beramiz 🙏",
     );
     if (bot.admin_chat_id) {
       await tg
@@ -215,7 +242,7 @@ async function handleCallback(bot: BotRow, cb: TgCallbackQuery) {
           bot.admin_chat_id,
           `🛟 Operator chaqirildi.\nMijoz: ${conv.customer_name ?? "?"} (@${
             conv.customer_username ?? "?"
-          })`
+          })`,
         )
         .catch(() => {});
     }
@@ -226,11 +253,237 @@ async function handleCallback(bot: BotRow, cb: TgCallbackQuery) {
     if (bot.welcome_message) {
       const buttons = await getDefaultButtons(bot);
       await tg.sendMessage(cb.message.chat.id, bot.welcome_message, {
-        reply_markup: buildKeyboard(buttons),
+        reply_markup: buildKeyboard(buttons, bot),
       });
     }
     return;
   }
+
+  // Order lifecycle: order_accept_<id> / order_ship_<id> / order_deliver_<id> / order_cancel_<id>
+  // BeautyShop pattern - admin inline tugmalardan status o'zgartiradi.
+  const orderMatch = cb.data?.match(/^order_(accept|ship|deliver|cancel)_(.+)$/);
+  if (orderMatch) {
+    return handleOrderCallback(bot, cb, tg, orderMatch[1] as OrderAction, orderMatch[2]);
+  }
+
+  // Review rating: order_rate_<orderId>_<1-5>
+  const rateMatch = cb.data?.match(/^order_rate_([^_]+)_([1-5])$/);
+  if (rateMatch) {
+    return handleRatingCallback(bot, cb, tg, rateMatch[1], parseInt(rateMatch[2], 10));
+  }
+}
+
+type OrderAction = "accept" | "ship" | "deliver" | "cancel";
+
+async function handleOrderCallback(
+  bot: BotRow,
+  cb: TgCallbackQuery,
+  tg: TgBot,
+  action: OrderAction,
+  orderId: string,
+) {
+  if (!cb.message) return;
+  const sb = db();
+
+  const { data: order } = await sb
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .eq("bot_id", bot.id)
+    .maybeSingle();
+
+  if (!order) {
+    await tg.answerCallbackQuery(cb.id, { text: "Buyurtma topilmadi" }).catch(() => {});
+    return;
+  }
+
+  // Status o'tishi qoidalari (BeautyShop pattern)
+  const transitions: Record<OrderAction, { from: string[]; to: string }> = {
+    accept: { from: ["pending"], to: "confirmed" },
+    ship: { from: ["confirmed"], to: "in_progress" },
+    deliver: { from: ["confirmed", "in_progress"], to: "completed" },
+    cancel: { from: ["pending", "confirmed", "in_progress"], to: "cancelled" },
+  };
+  const t = transitions[action];
+  if (!t.from.includes((order as { status: string }).status)) {
+    await tg
+      .answerCallbackQuery(cb.id, { text: "Bu o'tish mumkin emas" })
+      .catch(() => {});
+    return;
+  }
+
+  await sb
+    .from("orders")
+    .update({
+      status: t.to,
+      ...(t.to === "completed" ? { completed_at: new Date().toISOString() } : {}),
+    })
+    .eq("id", orderId);
+
+  const statusUz: Record<string, string> = {
+    pending: "Kutilmoqda ⏳",
+    confirmed: "Qabul qilindi ✅",
+    in_progress: "Yo'lga chiqdi 🚚",
+    completed: "Yetkazildi 📦",
+    cancelled: "Bekor qilindi ❌",
+  };
+
+  // Admin xabar matnini yangilash + tugmalarni keyingi statusga moslash
+  const displayId = `ORD-${orderId.slice(-6).toUpperCase()}`;
+  const newKeyboard: { text: string; callback_data?: string; url?: string }[][] = [];
+  if (t.to === "confirmed") {
+    newKeyboard.push([
+      { text: "🚚 Jo'natildi", callback_data: `order_ship_${orderId}` },
+      { text: "📦 Yetkazildi", callback_data: `order_deliver_${orderId}` },
+    ]);
+    newKeyboard.push([{ text: "❌ Bekor", callback_data: `order_cancel_${orderId}` }]);
+  } else if (t.to === "in_progress") {
+    newKeyboard.push([
+      { text: "📦 Yetkazildi", callback_data: `order_deliver_${orderId}` },
+    ]);
+  }
+  const orderRow = order as { customer_tg_id: number | null; customer_tg_username: string | null };
+  if (orderRow.customer_tg_id) {
+    newKeyboard.push([
+      { text: "💬 Mijozga yozish", url: `tg://user?id=${orderRow.customer_tg_id}` },
+    ]);
+  }
+
+  try {
+    await tg.call("editMessageText", {
+      chat_id: cb.message.chat.id,
+      message_id: cb.message.message_id,
+      text:
+        `🛒 Buyurtma\n🆔 ${displayId}\n📊 Status: <b>${statusUz[t.to]}</b>\n\n` +
+        ((cb.message as { text?: string }).text ?? "")
+          .split("\n")
+          .filter(
+            (l) =>
+              !l.startsWith("📊 Status:") &&
+              !l.startsWith("🛒") &&
+              !l.startsWith("🆔") &&
+              l.trim() !== "",
+          )
+          .join("\n"),
+      parse_mode: "HTML",
+      reply_markup: newKeyboard.length > 0 ? { inline_keyboard: newKeyboard } : undefined,
+    });
+  } catch {}
+
+  // Mijozga xabar (status yangilangan)
+  if (orderRow.customer_tg_id) {
+    await tg
+      .sendMessage(
+        orderRow.customer_tg_id,
+        `Sizning buyurtmangiz (${displayId}) holati o'zgardi:\n\n<b>${statusUz[t.to]}</b>`,
+      )
+      .catch(() => {});
+  }
+
+  // Yetkazilganda: review so'rash + cashback (referral bonus)
+  if (t.to === "completed" && orderRow.customer_tg_id) {
+    // Cashback: agar referral'da yozilgan bo'lsa
+    try {
+      const total = (order as { total_uzs: number }).total_uzs ?? 0;
+      const cashback = Math.floor(total * 0.02);
+      const { data: ref } = await sb
+        .from("referrals")
+        .select("*")
+        .eq("bot_id", bot.id)
+        .eq("referred_tg_id", orderRow.customer_tg_id)
+        .eq("bonus_granted", false)
+        .maybeSingle();
+      if (ref) {
+        const refRow = ref as { id: string; referrer_tg_id: number };
+        await sb
+          .from("referrals")
+          .update({ bonus_granted: true, bonus_uzs: cashback })
+          .eq("id", refRow.id);
+        // Referrer'ga loyalty_points ga qo'shish
+        await sb.rpc("upsert_customer_profile", {
+          p_bot_id: bot.id,
+          p_tg_id: refRow.referrer_tg_id,
+          p_name: null,
+          p_phone: null,
+          p_username: null,
+        });
+        await sb
+          .from("customer_profiles")
+          .update({ loyalty_points: cashback })
+          .eq("bot_id", bot.id)
+          .eq("tg_user_id", refRow.referrer_tg_id);
+        await tg
+          .sendMessage(
+            refRow.referrer_tg_id,
+            `🎉 Tabriklaymiz! Siz taklif qilgan mijoz xarid qildi va sizga ${cashback.toLocaleString("uz-UZ")} so'm keshbek tushdi!`,
+          )
+          .catch(() => {});
+      }
+    } catch (e) {
+      console.error("[order_deliver] cashback error", e);
+    }
+
+    // Review so'rash
+    await tg
+      .sendMessage(
+        orderRow.customer_tg_id,
+        "Xarid qilingan mahsulotlardan mamnunmisiz?\nIltimos, do'konimizga baho bering:",
+        {
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: "1⭐", callback_data: `order_rate_${orderId}_1` },
+                { text: "2⭐", callback_data: `order_rate_${orderId}_2` },
+                { text: "3⭐", callback_data: `order_rate_${orderId}_3` },
+              ],
+              [
+                { text: "4⭐", callback_data: `order_rate_${orderId}_4` },
+                { text: "5⭐", callback_data: `order_rate_${orderId}_5` },
+              ],
+            ],
+          },
+        },
+      )
+      .catch(() => {});
+  }
+
+  await tg.answerCallbackQuery(cb.id, { text: `Status: ${statusUz[t.to]}` }).catch(() => {});
+}
+
+async function handleRatingCallback(
+  bot: BotRow,
+  cb: TgCallbackQuery,
+  tg: TgBot,
+  orderId: string,
+  rating: number,
+) {
+  if (!cb.message) return;
+  const sb = db();
+  const tgUserId = cb.from.id;
+  const customerName =
+    [cb.from.first_name, cb.from.last_name].filter(Boolean).join(" ") || null;
+
+  // Reviews jadvaliga yozamiz (yoki yangilaymiz - order_id unique emas)
+  await sb.from("reviews").insert({
+    bot_id: bot.id,
+    customer_tg_id: tgUserId,
+    customer_name: customerName,
+    rating,
+    order_id: orderId,
+    is_published: true,
+  });
+
+  await tg
+    .call("editMessageText", {
+      chat_id: cb.message.chat.id,
+      message_id: cb.message.message_id,
+      text: `Siz ${rating} yulduz qo'ydingiz! Rahmat 🌸\n\nIstasangiz qisqacha sharh yozib yuboring (matn ixtiyoriy).`,
+    })
+    .catch(() => {});
+
+  await tg
+    .answerCallbackQuery(cb.id, { text: "Baho qabul qilindi!" })
+    .catch(() => {});
 }
 
 async function runAction(
@@ -238,7 +491,7 @@ async function runAction(
   conv: ConversationRow,
   msg: TgMessage,
   tg: TgBot,
-  action: AiAction
+  action: AiAction,
 ) {
   const sb = db();
 
@@ -279,7 +532,7 @@ async function runAction(
               bot.admin_chat_id,
               `🛟 Operator chaqirildi.\nMijoz: ${conv.customer_name ?? "?"} (@${
                 conv.customer_username ?? "?"
-              })\nSabab: ${eff.reason ?? "—"}`
+              })\nSabab: ${eff.reason ?? "—"}`,
             )
             .catch(() => {});
         }
@@ -289,7 +542,7 @@ async function runAction(
           await tg
             .sendMessage(
               bot.admin_chat_id,
-              `📅 <b>Yangi bron</b>\nXizmat: ${eff.service}\nVaqt: ${eff.slot}\nMijoz: ${conv.customer_name ?? "?"} (@${conv.customer_username ?? "?"})`
+              `📅 <b>Yangi bron</b>\nXizmat: ${eff.service}\nVaqt: ${eff.slot}\nMijoz: ${conv.customer_name ?? "?"} (@${conv.customer_username ?? "?"})`,
             )
             .catch(() => {});
         }
@@ -299,7 +552,7 @@ async function runAction(
           await tg
             .sendMessage(
               bot.admin_chat_id,
-              `🛒 <b>Yangi buyurtma</b>\nID: ${eff.orderId.slice(0, 8)}\nJami: ${eff.total.toLocaleString("uz")} so'm\nMijoz: ${conv.customer_name ?? "?"} (@${conv.customer_username ?? "?"})`
+              `🛒 <b>Yangi buyurtma</b>\nID: ${eff.orderId.slice(0, 8)}\nJami: ${eff.total.toLocaleString("uz")} so'm\nMijoz: ${conv.customer_name ?? "?"} (@${conv.customer_username ?? "?"})`,
             )
             .catch(() => {});
         }
@@ -319,7 +572,7 @@ async function runAction(
 
 async function getOrCreateConversation(
   botId: string,
-  msg: TgMessage
+  msg: TgMessage,
 ): Promise<ConversationRow> {
   const sb = db();
   const { data: existing } = await sb
@@ -346,9 +599,27 @@ async function getOrCreateConversation(
   return data as ConversationRow;
 }
 
-async function getDefaultButtons(bot: BotRow): Promise<string[]> {
+// Bot uchun aktual tugmalar ro'yxati. Avval bot_data.custom_buttons (AI generatsiya
+// yoki egasi tahriri), so'ng bot_templates.default_buttons (sklet pack).
+async function getDefaultButtons(bot: BotRow): Promise<BotButton[]> {
+  const sb = db();
+  try {
+    const { data: bd } = await sb
+      .from("bot_data")
+      .select("custom_buttons")
+      .eq("bot_id", bot.id)
+      .maybeSingle();
+    let cb = (bd as { custom_buttons?: unknown } | null)?.custom_buttons;
+    if (typeof cb === "string") {
+      try { cb = JSON.parse(cb); } catch {}
+    }
+    if (Array.isArray(cb) && cb.length > 0) {
+      return cb as BotButton[];
+    }
+  } catch {}
+
   if (!bot.template_id) return [];
-  const { data } = await db()
+  const { data } = await sb
     .from("bot_templates")
     .select("default_buttons")
     .eq("id", bot.template_id)
@@ -361,6 +632,6 @@ async function getDefaultButtons(bot: BotRow): Promise<string[]> {
       raw = [];
     }
   }
-  const arr = (raw ?? []) as { text: string }[];
-  return Array.isArray(arr) ? arr.map((b) => b.text) : [];
+  const arr = (raw ?? []) as BotButton[];
+  return Array.isArray(arr) ? arr : [];
 }

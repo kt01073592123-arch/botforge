@@ -140,6 +140,14 @@ export async function POST(req: Request) {
       );
     }
 
+    // AI-generated tugmalarni Mini App formatida saqlaymiz: birinchi tugma har doim
+    // web_app (storefront/Mini App) - chunki BeautyShop pattern shuni nazarda tutadi.
+    // Bot egasi keyin /app/bots/[id]/settings da o'zgartirishi mumkin.
+    const customButtons = cfg.buttons.map((b, i) => ({
+      text: b.text,
+      ...(i === 0 ? { web_app: true } : {}),
+    }));
+
     // bot_data ga AI-generated ma'lumotlar
     await sb.from("bot_data").insert({
       bot_id: botRow.id,
@@ -147,6 +155,7 @@ export async function POST(req: Request) {
       faq: cfg.faq,
       working_hours: cfg.working_hours,
       contacts: cfg.contacts,
+      custom_buttons: customButtons,
     });
 
     try {
@@ -158,8 +167,7 @@ export async function POST(req: Request) {
         .limit(1);
     } catch {}
 
-    // SAYT DIZAYNI - Design Kit (brand+copy+hero image) + default page layout
-    // Background, response'ni bloklamaydi.
+    // SAYT DIZAYNI - background fire-and-forget
     let siteJobStarted = false;
     if (body.generateSite) {
       siteJobStarted = true;

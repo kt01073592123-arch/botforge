@@ -127,8 +127,14 @@ export class TgBot {
     return this.call("sendChatAction", { chat_id: chatId, action });
   }
 
-  answerCallbackQuery(id: string, text?: string) {
-    return this.call("answerCallbackQuery", { callback_query_id: id, text });
+  answerCallbackQuery(
+    id: string,
+    opts?: string | { text?: string; show_alert?: boolean; url?: string; cache_time?: number },
+  ) {
+    const params: Record<string, unknown> = { callback_query_id: id };
+    if (typeof opts === "string") params.text = opts;
+    else if (opts) Object.assign(params, opts);
+    return this.call("answerCallbackQuery", params);
   }
 
   editMessageReplyMarkup(
@@ -209,7 +215,7 @@ export type TgMessage = {
 
 export type TgCallbackQuery = {
   id: string;
-  from: { id: number; first_name: string; username?: string };
+  from: { id: number; first_name: string; last_name?: string; username?: string };
   message?: TgMessage;
   data?: string;
 };
