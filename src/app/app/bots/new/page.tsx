@@ -45,10 +45,56 @@ export default function NewBotPage() {
       <Topbar title="Bot turini tanlang" back="back" />
       <div className="max-w-3xl mx-auto px-4 py-4 space-y-6">
         {loading ? (
-          <div className="text-sm text-muted py-12 text-center">Yuklanmoqda…</div>
+          <div className="text-sm text-muted py-12 text-center">Yuklanmoqda...</div>
         ) : (
           <>
-            <Section title="📦 Tayyor packlar" subtitle="Real narx, FAQ, ish vaqti — hammasi to‘ldirilgan">
+            {/* AI prompt'dan yaratish - eng yuqorida */}
+            <Link
+              href="/app/bots/new/from-prompt"
+              className="block panel overflow-hidden border border-accent/40 hover:border-accent transition relative"
+            >
+              <div
+                className="h-24 flex items-center px-5 relative"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #7c5cff 0%, #FF8FA3 50%, #19c37d 100%)",
+                }}
+              >
+                <div className="text-5xl drop-shadow-md">✨</div>
+                <div className="absolute right-4 top-3 flex gap-1">
+                  <span className="text-lg opacity-80">🤖</span>
+                  <span className="text-lg opacity-80">💭</span>
+                  <span className="text-lg opacity-80">🚀</span>
+                </div>
+                <div className="absolute right-3 bottom-3 px-2 py-0.5 rounded-full bg-black/20 backdrop-blur text-[10px] text-white uppercase tracking-wider font-bold">
+                  YANGI
+                </div>
+              </div>
+              <div className="p-4">
+                <div className="font-bold text-base">
+                  ✨ AI&apos;dan bot + sayt yarating
+                </div>
+                <div className="text-xs text-muted leading-snug mt-0.5">
+                  Biznesingizni 1-2 jumlada tasvirlang. AI BeautyShop sklet
+                  ustidan bot tugmalari, mahsulotlar, FAQ, brend va to&apos;liq
+                  sayt dizayni (hero rasm + copy + bloklar) ni avtomatik
+                  yaratadi.
+                </div>
+                <div className="flex gap-1.5 mt-2 flex-wrap text-[11px]">
+                  <span className="px-2 py-0.5 rounded-full bg-bg border border-border text-muted">
+                    🤖 Claude AI
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-bg border border-border text-muted">
+                    💄 BeautyShop sklet
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-bg border border-border text-muted">
+                    🎨 Sayt + bot
+                  </span>
+                </div>
+              </div>
+            </Link>
+
+            <Section title="📦 Tayyor packlar" subtitle="Real narx, FAQ, ish vaqti - hammasi to'ldirilgan">
               <div className="grid gap-3">
                 {packs.map((p) => (
                   <PackCard key={p.id} pack={p} />
@@ -58,8 +104,8 @@ export default function NewBotPage() {
 
             {horizontal.length > 0 && (
               <Section
-                title="📄 Universal template’lar"
-                subtitle="Bo‘sh template — o‘zingiz to‘ldirasiz"
+                title="📄 Universal template'lar"
+                subtitle="Bo'sh template - o'zingiz to'ldirasiz"
               >
                 <div className="grid gap-2">
                   {horizontal.map((t) => (
@@ -142,7 +188,7 @@ function PackCard({ pack }: { pack: TemplateCard }) {
           </div>
         </div>
         <div className="text-xs text-muted italic px-3 py-2 bg-bg rounded-lg border border-border">
-          “{pack.default_welcome}”
+          &ldquo;{pack.default_welcome}&rdquo;
         </div>
         <div className="flex flex-wrap gap-1.5 text-[11px]">
           <Badge>✓ {pack.services_count} xizmat</Badge>
@@ -155,7 +201,7 @@ function PackCard({ pack }: { pack: TemplateCard }) {
             href={`/app/bots/new/demo/${pack.id}`}
             className="btn-ghost flex-1 !py-2 !text-xs"
           >
-            👁️ Sinab ko‘rish
+            👁️ Sinab ko&apos;rish
           </Link>
           <Link
             href={`/app/bots/new/wizard/${pack.id}`}
