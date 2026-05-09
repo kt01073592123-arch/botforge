@@ -263,8 +263,11 @@ export default function CustomerWebApp() {
   const primary = bk.primary_color ?? "#EC4899";
   const gradient =
     bk.gradient ?? `linear-gradient(135deg, ${primary} 0%, ${accent} 100%)`;
-  const tint = bk.background_tint ?? "#0a0c10";
   const textOnPrimary = bk.text_on_primary ?? "#fff";
+  // Mini App fonini har doim qora gradientga aylantiramiz — yorug' brand
+  // tint'da oq matn ko'rinmaydi. Aurora effektlar primary/accent bilan
+  // brand rangini saqlab qoladi.
+  const darkBase = `linear-gradient(180deg, #0F0E1A 0%, #1A1426 50%, #0A0814 100%)`;
 
   // ==========================================================================
   // RENDER
@@ -272,7 +275,10 @@ export default function CustomerWebApp() {
   return (
     <div
       className="min-h-screen pb-28 relative overflow-x-hidden text-white"
-      style={{ background: tint }}
+      style={{
+        background: darkBase,
+        paddingTop: "max(env(safe-area-inset-top), 0.75rem)",
+      }}
     >
       {/* Aurora background */}
       <AuroraBg primary={primary} accent={accent} />
@@ -500,15 +506,15 @@ function AuroraBg({ primary, accent }: { primary: string; accent: string }) {
   return (
     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
       <div
-        className="absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-30 blur-3xl"
+        className="absolute -top-40 -left-32 w-[500px] h-[500px] rounded-full opacity-40 blur-3xl"
         style={{ background: primary, animation: "auroraFloat 20s ease-in-out infinite" }}
       />
       <div
-        className="absolute top-1/3 -right-40 w-[500px] h-[500px] rounded-full opacity-20 blur-3xl"
+        className="absolute top-1/3 -right-48 w-[600px] h-[600px] rounded-full opacity-30 blur-3xl"
         style={{ background: accent, animation: "auroraFloat 25s ease-in-out infinite reverse" }}
       />
       <div
-        className="absolute bottom-0 left-1/3 w-80 h-80 rounded-full opacity-25 blur-3xl"
+        className="absolute bottom-0 left-1/3 w-[420px] h-[420px] rounded-full opacity-35 blur-3xl"
         style={{
           background: `linear-gradient(135deg, ${primary}, ${accent})`,
           animation: "auroraFloat 30s ease-in-out infinite",

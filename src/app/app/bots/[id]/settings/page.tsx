@@ -10,10 +10,36 @@ export default function SettingsPage() {
   const [bot, setBot] = useState<BotRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [polishBusy, setPolishBusy] = useState(false);
+  const [polishMsg, setPolishMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/bots/${id}`).then((r) => r.json()).then((d) => setBot(d.bot));
   }, [id]);
+
+  async function resyncMiniApp() {
+    setPolishBusy(true);
+    setPolishMsg(null);
+    try {
+      const res = await fetch(`/api/bots/${id}/polish`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Xato");
+      const ok = data.applied?.menu_button !== false && (data.errors ?? []).length === 0;
+      const errMsg = (data.errors ?? []).find((e: string) => e.startsWith("menu_button"));
+      if (errMsg) {
+        setPolishMsg(`❌ ${errMsg}`);
+      } else if (ok) {
+        setPolishMsg("✓ Mini App tugmasi yangilandi. Telegram chatni yangilang.");
+      } else {
+        setPolishMsg("✓ Sozlash bajarildi (qisman).");
+      }
+      setTimeout(() => setPolishMsg(null), 6000);
+    } catch (e) {
+      setPolishMsg(`❌ ${(e as Error).message}`);
+    } finally {
+      setPolishBusy(false);
+    }
+  }
 
   async function save() {
     if (!bot) return;
@@ -135,6 +161,48 @@ export default function SettingsPage() {
             Hozir ishlatilgan: {bot.monthly_messages_used}
           </div>
         </Field>
+
+        {/* Mini App qayta ulash */}
+        <div className="panel p-4 space-y-3 border-accent/30">
+          <div>
+            <div className="font-semibold text-sm flex items-center gap-2">
+              📱 Mini App
+            </div>
+            <div className="text-xs text-muted mt-1">
+              Bot menyusidagi tugma Mini App'ni ochishi uchun. Agar tugma ko'rinmasa
+              yoki hali Mini App emas bo'lsa, qayta ulash bosing.
+            </div>
+          </div>
+          {bot.tg_username ? (
+            <>
+              <div className="text-xs text-muted">
+                URL: <code className="text-accent break-all">
+                  /c/{bot.tg_username}
+                </code>
+              </div>
+              <button
+                onClick={resyncMiniApp}
+                disabled={polishBusy}
+                className="btn-primary !py-2 !text-sm w-full"
+              >
+                {polishBusy ? "Sozlanmoqda..." : "🔄 Mini App'ni qayta ulash"}
+              </button>
+              {polishMsg && (
+                <div
+                  className={`text-xs ${
+                    polishMsg.startsWith("❌") ? "text-danger" : "text-accent"
+                  }`}
+                >
+                  {polishMsg}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-xs text-muted">
+              Avval bot tokenini ulang.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

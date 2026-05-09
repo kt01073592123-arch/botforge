@@ -110,6 +110,26 @@ export class TgBot {
     return this.call<boolean>("deleteWebhook", { drop_pending_updates: true });
   }
 
+  // Bot uchun "Menu" tugmasini Web App (Mini App) sifatida sozlaydi.
+  // Bu tugma chat ostida kirish maydonining yonida ko'rinadi va botFather'da
+  // alohida sozlash kerak emas. opts.url - HTTPS Mini App URL.
+  setChatMenuButton(opts: { text: string; url: string }) {
+    return this.call<boolean>("setChatMenuButton", {
+      menu_button: {
+        type: "web_app",
+        text: opts.text,
+        web_app: { url: opts.url },
+      },
+    });
+  }
+
+  // Default menu tugmasini tiklaydi (Mini App'ni o'chiradi).
+  resetChatMenuButton() {
+    return this.call<boolean>("setChatMenuButton", {
+      menu_button: { type: "default" },
+    });
+  }
+
   sendMessage(
     chatId: number | string,
     text: string,

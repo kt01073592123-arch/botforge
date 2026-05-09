@@ -6,6 +6,11 @@ import Topbar from "@/components/Topbar";
 
 type Mode = "auto" | "manual";
 
+type OnboardInfo = {
+  bot_username: string;
+  mini_app_url: string;
+};
+
 export default function ConnectPage() {
   const { id } = useParams<{ id: string }>();
   const r = useRouter();
@@ -14,6 +19,7 @@ export default function ConnectPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [autoSent, setAutoSent] = useState(false);
+  const [onboard, setOnboard] = useState<OnboardInfo | null>(null);
 
   async function startAuto() {
     setErr(null);
@@ -51,12 +57,81 @@ export default function ConnectPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      r.replace(`/app/bots/${id}`);
+      // Onboarding ekrani: Mini App URL va keyingi qadamlarni ko'rsatamiz.
+      // Bot aktivatsiyasini ham bu yerda ishga tushiramiz, polish (setChatMenuButton)
+      // shu paytda qo'llanadi.
+      const username = data?.bot?.tg_username;
+      try {
+        await fetch(`/api/bots/${id}/activate`, { method: "POST" });
+      } catch {}
+      const baseUrl =
+        typeof window !== "undefined" ? window.location.origin : "";
+      setOnboard({
+        bot_username: username,
+        mini_app_url: `${baseUrl}/c/${username}`,
+      });
     } catch (e) {
       setErr((e as Error).message);
     } finally {
       setBusy(false);
     }
+  }
+
+  if (onboard) {
+    return (
+      <div>
+        <Topbar title="Bot ulandi" back="back" />
+        <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+          <div className="text-center space-y-2">
+            <div className="text-6xl">🎉</div>
+            <h2 className="text-2xl font-bold">Bot tayyor!</h2>
+            <p className="text-sm text-muted">
+              <code className="text-accent">@{onboard.bot_username}</code>{" "}
+              ulandi va Mini App tugmasi avtomatik sozlandi.
+            </p>
+          </div>
+
+          <div className="panel p-4 space-y-3">
+            <div className="font-semibold text-sm">📱 Mini App URL</div>
+            <div className="text-xs text-muted break-all bg-bg/50 p-2 rounded-md">
+              {onboard.mini_app_url}
+            </div>
+            <div className="text-xs text-muted leading-relaxed">
+              Telegram'da bot bilan suhbatda yuqoridagi <b>Menu</b> tugmasi (kirish maydoni
+              yonida) bosilganda Mini App ochiladi. Bu sozlama avtomatik bajarildi —
+              BotFather'da hech narsa qilish kerak emas.
+            </div>
+          </div>
+
+          <div className="panel p-4 space-y-2">
+            <div className="font-semibold text-sm">Keyingi qadamlar:</div>
+            <ol className="text-sm space-y-1.5 list-decimal pl-5 text-muted">
+              <li>
+                Telegram'da{" "}
+                <a
+                  className="text-accent"
+                  href={`https://t.me/${onboard.bot_username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  @{onboard.bot_username}
+                </a>{" "}
+                ga <code>/start</code> yuboring
+              </li>
+              <li>Bot menyusidagi tugmadan Mini App'ni oching</li>
+              <li>Botingizga mahsulot/xizmat qo'shing — bo'sh sahifa to'ldiriladi</li>
+            </ol>
+          </div>
+
+          <button
+            onClick={() => r.replace(`/app/bots/${id}`)}
+            className="btn-primary w-full !py-3"
+          >
+            Boshqaruv paneliga o'tish →
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (autoSent) {

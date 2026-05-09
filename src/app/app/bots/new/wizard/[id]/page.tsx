@@ -43,6 +43,7 @@ export default function WizardPage() {
   const [tone, setTone] = useState<string | undefined>();
   const [name, setName] = useState("");
   const [businessName, setBusinessName] = useState("");
+  const [enableMiniApp, setEnableMiniApp] = useState<boolean>(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -116,6 +117,7 @@ export default function WizardPage() {
           subTypeId: subType,
           tierId: tier,
           toneId: tone,
+          enableMiniApp,
         }),
       });
       const data = await res.json();
@@ -346,6 +348,32 @@ export default function WizardPage() {
                 <div className="text-sm">✓ Brand rangi pack uslubida</div>
               </div>
             )}
+
+            {/* Mini App toggle — bot tugmalariga "📱 Mini App" qo'shish */}
+            <label
+              className="panel p-3 mt-3 flex items-start gap-3 cursor-pointer transition active:scale-[0.99]"
+              style={{
+                borderColor: enableMiniApp ? pack.brand_kit.accent_color : undefined,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={enableMiniApp}
+                onChange={(e) => setEnableMiniApp(e.target.checked)}
+                className="mt-1 w-4 h-4 cursor-pointer"
+                style={{ accentColor: pack.brand_kit.accent_color }}
+              />
+              <div className="flex-1">
+                <div className="font-semibold text-sm flex items-center gap-2">
+                  📱 Mini App tugmasini bot menyusiga qo‘shish
+                </div>
+                <div className="text-xs text-muted mt-0.5 leading-snug">
+                  Bot Telegram menyusida “Mini App” tugmasi paydo bo‘ladi —
+                  mijoz mahsulot/xizmat ko‘rishi uchun. Pack’da allaqachon bor
+                  bo‘lsa o‘zgarmaydi.
+                </div>
+              </div>
+            </label>
           </Step>
         )}
 

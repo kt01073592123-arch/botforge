@@ -51,6 +51,10 @@ export async function createBot(opts: {
   subTypeId?: string;
   tierId?: string;
   toneId?: string;
+  // Mini App tugmasini majburan yoqish (vertikal'dan qat'i nazar).
+  // Agar true va resolved.buttons'da hali web_app tugmasi bo'lmasa,
+  // boshiga "📱 Mini App" tugmasi qo'shiladi.
+  enableMiniApp?: boolean;
 }): Promise<BotRow> {
   const sb = db();
 
@@ -102,6 +106,10 @@ export async function createBot(opts: {
     .single();
   if (error || !data) throw new Error(error?.message ?? "create failed");
 
+  // Mini App toggle: agar enableMiniApp=true va resolved.buttons'da web_app tugmasi
+  // yo'q bo'lsa, custom_buttons orqali boshiga "📱 Mini App" qo'shamiz.
+  const customButtons = computeCustomButtons(resolved.buttons, opts.enableMiniApp);
+
   // bot_data ga packdan ko‘chirilgan ma’lumot
   await sb.from("bot_data").insert({
     bot_id: data.id,
@@ -109,9 +117,33 @@ export async function createBot(opts: {
     faq: resolved.faq,
     working_hours: resolved.working_hours,
     contacts: resolved.contacts,
+    ...(customButtons ? { custom_buttons: customButtons } : {}),
   });
 
   return data as BotRow;
+}
+
+// Wizard'dagi enableMiniApp toggle uchun yordamchi.
+// Pack default_buttons'da hali web_app tugmasi bo'lmasa, boshiga "📱 Mini App"
+// tugmasini qo'shadi va to'liq buttons ro'yxatini qaytaradi (custom_buttons sifatida saqlash uchun).
+// Agar yoqilmagan yoki allaqachon web_app tugmasi bo'lsa, NULL qaytaradi (template fallback'ga qoldiriladi).
+type RawBtn = string | { text: string; web_app?: boolean; url?: string };
+function computeCustomButtons(
+  baseButtons: unknown,
+  enableMiniApp: boolean | undefined,
+): RawBtn[] | null {
+  if (!enableMiniApp) return null;
+  let parsed: unknown = baseButtons;
+  if (typeof parsed === "string") {
+    try { parsed = JSON.parse(parsed); } catch { return null; }
+  }
+  if (!Array.isArray(parsed)) return null;
+  const arr = parsed as RawBtn[];
+  const hasWebApp = arr.some(
+    (b) => typeof b === "object" && b !== null && (b as { web_app?: boolean }).web_app === true,
+  );
+  if (hasWebApp) return null;
+  return [{ text: "📱 Mini App", web_app: true }, ...arr];
 }
 
 export async function setBotToken(opts: {
@@ -202,7 +234,9 @@ export async function activateBot(opts: { ownerId: string; botId: string }) {
 
   await db().from("bots").update({ status: "active" }).eq("id", opts.botId);
 
-  // Auto-polish brendlash
+  // Auto-polish: brendlash + setChatMenuButton (Mini App tugmasi).
+  // bot_polish.ts ichida Mini App tugmasi sozlanadi, shuning uchun
+  // bot egasi BotFather'da qo'shimcha sozlama qilmasligi shart emas.
   try {
     const { applyBotPolish } = await import("./bot_polish");
     await applyBotPolish({ ownerId: opts.ownerId, botId: opts.botId });

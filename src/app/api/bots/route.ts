@@ -25,6 +25,8 @@ const CreateBody = z.object({
   subTypeId: z.string().optional(),
   tierId: z.string().optional(),
   toneId: z.string().optional(),
+  // Mini App tugmasini majburan yoqish
+  enableMiniApp: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -40,6 +42,7 @@ export async function POST(req: Request) {
       subTypeId: body.subTypeId,
       tierId: body.tierId,
       toneId: body.toneId,
+      enableMiniApp: body.enableMiniApp,
     });
     return NextResponse.json({ bot });
   } catch (e) {
