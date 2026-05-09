@@ -85,7 +85,7 @@ language sql as $$
   -- 30 kundan eski webhook log'lar
   delete from public.webhook_logs where created_at < now() - interval '30 days';
   -- 24 soatdan eski rate_limits counterlari
-  delete from public.rate_limits where window_start < now() - interval '1 day';
+  delete from public.rate_limits where window_started_at < now() - interval '1 day';
 $$;
 
 do $$ begin

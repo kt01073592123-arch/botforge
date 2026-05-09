@@ -178,8 +178,8 @@ Faqat JSON qaytar. Boshqa matn yozma.`;
       messages: [{ role: "user", content: prompt }],
     });
     const text = response.content
-      .filter((blk): blk is { type: "text"; text: string } => blk.type === "text")
-      .map((blk) => blk.text)
+      .filter((blk) => blk.type === "text")
+      .map((blk) => (blk as { type: "text"; text: string }).text)
       .join("");
     const json = text.match(/\{[\s\S]*\}/);
     if (json) parsed = JSON.parse(json[0]);

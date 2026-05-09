@@ -60,15 +60,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
     const cost = estimateCostUsd(bot.ai_model, result.usage.prompt, result.usage.completion);
     // Sandbox usage'ni alohida belgilab DB'ga yozamiz (sandbox=true bilan)
-    await db().from("ai_usage").insert({
-      bot_id: bot.id,
-      conversation_id: null,
-      model: bot.ai_model,
-      prompt_tokens: result.usage.prompt,
-      completion_tokens: result.usage.completion,
-      cost_usd: cost,
-      meta: { sandbox: true },
-    }).catch(() => {});
+    try {
+      await db().from("ai_usage").insert({
+        bot_id: bot.id,
+        conversation_id: null,
+        model: bot.ai_model,
+        prompt_tokens: result.usage.prompt,
+        completion_tokens: result.usage.completion,
+        cost_usd: cost,
+        meta: { sandbox: true },
+      });
+    } catch { /* sandbox usage write fail OK */ }
 
     // Tool effects'ni front'ga "preview" qilib qaytaramiz
     const messages = result.actions

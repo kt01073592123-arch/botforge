@@ -41,6 +41,7 @@ export async function embedOne(text: string): Promise<number[]> {
 // Matnni overlap’li chunklarga bo‘ladi (~500 belgi, 60 belgi overlap)
 export function chunkText(text: string, maxLen = 500, overlap = 60): string[] {
   const clean = text.replace(/\r\n?/g, "\n").trim();
+  if (!clean) return [];
   if (clean.length <= maxLen) return [clean];
   const out: string[] = [];
   let i = 0;

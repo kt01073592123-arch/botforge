@@ -31,8 +31,10 @@ create table if not exists public.customer_profiles (
 
 create index if not exists idx_customer_profiles_bot on public.customer_profiles (bot_id, last_seen_at desc);
 create index if not exists idx_customer_profiles_phone on public.customer_profiles (bot_id, phone) where phone is not null;
+-- now() partial index'da ishlatib bo'lmaydi (IMMUTABLE emas)
+-- Faqat summary is null partial — eski yozuvlarni cron yoki app filter qiladi
 create index if not exists idx_customer_profiles_resummarize on public.customer_profiles (last_summarized_at)
-  where summary is null or last_summarized_at < now() - interval '7 days';
+  where summary is null;
 
 -- ════════════════════════════════════════════
 -- Behavioral counters — har xabar/buyurtma'da chaqiriladi
