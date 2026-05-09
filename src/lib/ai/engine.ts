@@ -1,43 +1,26 @@
-// AI Engine — Anthropic Claude. Tool use (save_lead, request_human) + prompt caching.
+// AI Engine — Anthropic Claude. Multi-turn tool loop + customer memory + KB RAG.
+//
+// Eski versiya: faqat 2 ta tool, bitta turda to'xtab qolardi.
+// Yangi versiya:
+//   - 8 ta tool (booking, order, payment, KB search, ...)
+//   - while(stop_reason === "tool_use") loop — tool natijasi keyingi turga input
+//   - customer_profiles dan long-term memory
+//   - prompt caching (system + tools)
 
 import type Anthropic from "@anthropic-ai/sdk";
 import { anthropic } from "./anthropic";
 import { db } from "../supabase/server";
 import { env } from "../env";
 import { searchKnowledge } from "../kb";
-import type { BotRow, BotData, MessageRow } from "../supabase/types";
+import { TOOL_DEFINITIONS, executeTool, type ToolEffect, type ToolContext } from "./tools";
+import { getCustomerProfile, formatProfileForPrompt } from "../customer_memory";
+import type { BotRow, BotData, MessageRow, ConversationRow } from "../supabase/types";
 
 export type AiAction =
   | { type: "send"; text: string }
-  | { type: "save_lead"; name?: string; phone?: string; request?: string }
-  | { type: "request_human"; reason?: string };
+  | { type: "effect"; effect: ToolEffect };
 
-const TOOLS: Anthropic.Tool[] = [
-  {
-    name: "save_lead",
-    description:
-      "Mijoz aloqa qoldirgan bo‘lsa (ism, telefon yoki aniq talab) shu funksiyani chaqir.",
-    input_schema: {
-      type: "object",
-      properties: {
-        name: { type: "string", description: "Mijoz ismi" },
-        phone: { type: "string", description: "Telefon raqami" },
-        request: { type: "string", description: "Mijozning talabi/savoli" },
-      },
-    },
-  },
-  {
-    name: "request_human",
-    description:
-      "Mijoz operator bilan gaplashishni so‘rasa yoki javob bera olmasang shuni chaqir.",
-    input_schema: {
-      type: "object",
-      properties: {
-        reason: { type: "string", description: "Nega operator kerak" },
-      },
-    },
-  },
-];
+const MAX_TOOL_ITERATIONS = 5; // Cheksiz loop oldini olish
 
 function buildBusinessContext(bot: BotRow, bd: BotData | null): string {
   const lines: string[] = [];
@@ -45,7 +28,6 @@ function buildBusinessContext(bot: BotRow, bd: BotData | null): string {
   if (bot.language) lines.push(`TIL: ${bot.language}`);
   if (bd?.services?.length) {
     lines.push("\nMAHSULOTLAR VA XIZMATLAR:");
-    // Kategoriya bo‘yicha guruhlash, agar mavjud bo‘lsa
     const cats = bd.categories ?? [];
     const byCat = new Map<string | null, typeof bd.services>();
     for (const s of bd.services) {
@@ -64,7 +46,7 @@ function buildBusinessContext(bot: BotRow, bd: BotData | null): string {
       for (const s of items) {
         const dur = s.duration ? ` (${s.duration})` : "";
         const desc = s.description ? ` — ${s.description}` : "";
-        const stockMark = s.in_stock === false ? " [HOZIR YO‘Q]" : "";
+        const stockMark = s.in_stock === false ? " [HOZIR YO'Q]" : "";
         const photoMark = s.photo_url ? " [rasmi bor]" : "";
         lines.push(`- ${s.name} — ${s.price}${dur}${desc}${stockMark}${photoMark}`);
       }
@@ -93,8 +75,6 @@ function buildBusinessContext(bot: BotRow, bd: BotData | null): string {
   return lines.join("\n");
 }
 
-// History’ni Anthropic formatiga aylantirish.
-// 1-xabar `user` bo‘lishi shart. Boshlovchi `assistant` xabarlarni tashlaymiz.
 function toAnthropicMessages(
   history: Pick<MessageRow, "role" | "content">[]
 ): Anthropic.MessageParam[] {
@@ -104,13 +84,13 @@ function toAnthropicMessages(
       role: m.role as "user" | "assistant",
       content: m.content,
     }));
-  // Boshidagi assistant xabarlarni olib tashlaymiz
   while (filtered.length && filtered[0].role !== "user") filtered.shift();
   return filtered;
 }
 
 export async function generateReply(opts: {
   bot: BotRow;
+  conv: ConversationRow;
   history: Pick<MessageRow, "role" | "content">[];
 }): Promise<{
   actions: AiAction[];
@@ -123,7 +103,11 @@ export async function generateReply(opts: {
     .maybeSingle();
   const bd = bdRow as BotData | null;
 
-  // RAG (KB embeddings) — agar OPENAI_API_KEY o‘rnatilmagan bo‘lsa, kb hits = []
+  // Customer profile (long-term memory)
+  const profile = await getCustomerProfile(opts.bot.id, opts.conv.tg_user_id);
+  const memoryBlock = formatProfileForPrompt(profile);
+
+  // RAG (KB)
   const lastUserMsg =
     [...opts.history].reverse().find((m) => m.role === "user")?.content ?? "";
   const kbHits = await searchKnowledge({
@@ -138,76 +122,108 @@ export async function generateReply(opts: {
           .join("\n\n")}`
       : "";
 
-  // System: barqaror qism (cache qilinadi) + KB qism (har turda o‘zgaradi, cache qilinmaydi)
+  // System: cache qilinadigan barqaror qism + dinamik qism
   const stableSystem = [
     opts.bot.system_prompt ?? "",
     "\n\n=== BUSINESS_CONTEXT ===\n",
     buildBusinessContext(opts.bot, bd),
+    "\n\n=== TOOL_USAGE_RULES ===",
+    "- Mijoz operator so'rasa darhol request_human chaqir.",
+    "- Bron qilishdan oldin check_availability bilan bo'sh slotni tekshir.",
+    "- Buyurtma yaratganingdan keyin send_payment_link chaqir.",
+    "- Sen bilmagan biror narsa so'ralsa search_knowledge chaqir.",
+    "- Mijoz kontakt qoldirsa save_lead chaqir (parallel ravishda javob ham yoz).",
   ].join("\n");
 
   const systemBlocks: Anthropic.TextBlockParam[] = [
-    {
-      type: "text",
-      text: stableSystem,
-      cache_control: { type: "ephemeral" },
-    },
+    { type: "text", text: stableSystem, cache_control: { type: "ephemeral" } },
   ];
-  if (kbBlock) {
-    systemBlocks.push({ type: "text", text: kbBlock });
-  }
+  if (memoryBlock) systemBlocks.push({ type: "text", text: memoryBlock });
+  if (kbBlock) systemBlocks.push({ type: "text", text: kbBlock });
 
   const model = opts.bot.ai_model || env().AI_MODEL;
+  const toolCtx: ToolContext = { bot: opts.bot, conv: opts.conv, bd };
 
-  const response = await anthropic().messages.create({
-    model,
-    max_tokens: 800,
-    system: systemBlocks,
-    messages: toAnthropicMessages(opts.history),
-    tools: TOOLS,
-  });
-
+  // Multi-turn tool loop
+  const messages: Anthropic.MessageParam[] = toAnthropicMessages(opts.history);
   const actions: AiAction[] = [];
-  for (const block of response.content) {
-    if (block.type === "text") {
-      const txt = block.text.trim();
-      if (txt) actions.push({ type: "send", text: txt });
-    } else if (block.type === "tool_use") {
-      const input = block.input as Record<string, unknown>;
-      if (block.name === "save_lead") {
-        actions.push({
-          type: "save_lead",
-          name: input.name as string | undefined,
-          phone: input.phone as string | undefined,
-          request: input.request as string | undefined,
+  let totalPrompt = 0;
+  let totalCompletion = 0;
+
+  for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
+    const response = await anthropic().messages.create({
+      model,
+      max_tokens: 1024,
+      system: systemBlocks,
+      messages,
+      tools: TOOL_DEFINITIONS,
+    });
+
+    totalPrompt +=
+      response.usage.input_tokens +
+      (response.usage.cache_creation_input_tokens ?? 0) +
+      (response.usage.cache_read_input_tokens ?? 0);
+    totalCompletion += response.usage.output_tokens;
+
+    // Assistant javobini messages'ga qo'shamiz (keyingi turda kerak)
+    messages.push({ role: "assistant", content: response.content });
+
+    // Matn bloklarini darhol "send" actionga aylantiramiz
+    for (const block of response.content) {
+      if (block.type === "text") {
+        const txt = block.text.trim();
+        if (txt) actions.push({ type: "send", text: txt });
+      }
+    }
+
+    // Tool use bo'lmasa loop tugadi
+    if (response.stop_reason !== "tool_use") break;
+
+    // Hamma tool_use bloklarini bajaramiz va tool_result xabari yasaymiz
+    const toolUseBlocks = response.content.filter(
+      (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
+    );
+    if (toolUseBlocks.length === 0) break;
+
+    const toolResults: Anthropic.ToolResultBlockParam[] = [];
+    for (const tu of toolUseBlocks) {
+      try {
+        const result = await executeTool(tu.name, tu.input as Record<string, unknown>, toolCtx);
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: tu.id,
+          content: result.content,
         });
-      } else if (block.name === "request_human") {
-        actions.push({
-          type: "request_human",
-          reason: input.reason as string | undefined,
+        if (result.effects) {
+          for (const eff of result.effects) {
+            actions.push({ type: "effect", effect: eff });
+          }
+        }
+      } catch (e) {
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: tu.id,
+          content: `Tool xato: ${(e as Error).message}`,
+          is_error: true,
         });
       }
     }
+
+    messages.push({ role: "user", content: toolResults });
   }
 
-  // Agar AI faqat tool ishlatib hech narsa demagan bo‘lsa, qo‘shimcha javob
+  // Loop hech qanday matn ishlab chiqarmasa fallback
   if (actions.filter((a) => a.type === "send").length === 0) {
     actions.push({ type: "send", text: "Aniqlashtirib, admin javob beradi 🙏" });
   }
 
   return {
     actions,
-    usage: {
-      prompt:
-        response.usage.input_tokens +
-        (response.usage.cache_creation_input_tokens ?? 0) +
-        (response.usage.cache_read_input_tokens ?? 0),
-      completion: response.usage.output_tokens,
-    },
+    usage: { prompt: totalPrompt, completion: totalCompletion },
   };
 }
 
-// Anthropic narxlari ($/1M token). Cache read ~10% input narxi, lekin biz o‘rtacha hisoblaymiz.
-// https://www.anthropic.com/pricing
+// Anthropic narxlari ($/1M token).
 export function estimateCostUsd(
   model: string,
   prompt: number,

@@ -1,4 +1,6 @@
-// Telegram update ni qayta ishlovchi runtime — bot uchun universal. Webhook handler shu yerni chaqiradi.
+// Telegram update'ni qayta ishlovchi runtime — bot uchun universal.
+// Sprint 1: multi-turn AI engine + tool effects + customer memory.
+// Sprint 2: voice (Whisper) + photo (Vision) input.
 
 import { db } from "./supabase/server";
 import { TgBot } from "./telegram";
@@ -6,13 +8,13 @@ import { getBotToken } from "./bots";
 import { generateReply, estimateCostUsd, type AiAction } from "./ai/engine";
 import { rateLimit } from "./ratelimit";
 import { alertOwner } from "./alerts";
+import { touchProfile } from "./customer_memory";
+import { transcribeVoice, describePhoto } from "./ai/multimodal";
 import type { BotRow, ConversationRow, MessageRow } from "./supabase/types";
 import type { TgUpdate, TgMessage, TgCallbackQuery } from "./telegram";
 
-// Reply keyboard: oddiy tugma ro‘yxati. Inline keyboard: callback_data bilan.
 function buildKeyboard(buttons: string[]) {
   if (buttons.length === 0) return undefined;
-  // Reply keyboard + contact share tugma — Beauty/Lead bot uchun foydali
   const rows = [
     ...buttons.map((t) => [{ text: t }]),
     [{ text: "📞 Telefon raqamimni yuborish", request_contact: true }],
@@ -20,7 +22,6 @@ function buildKeyboard(buttons: string[]) {
   return { keyboard: rows, resize_keyboard: true };
 }
 
-// Inline tugmalar — “Telefon kutib turing” yoki “Bron tasdiqlash” kabi tezkor amallar
 function inlineReplies() {
   return {
     inline_keyboard: [
@@ -39,9 +40,13 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
 
   const msg = update.message ?? update.edited_message;
   if (!msg) return;
-  const text = (msg.text ?? "").trim();
-  if (!text && !msg.contact) return;
 
+  // ─── Inputni tushunish (text / voice / photo / contact) ───────────────
+  let text = (msg.text ?? "").trim();
+  const isVoice = !!msg.voice || !!msg.audio;
+  const isPhoto = !!msg.photo && msg.photo.length > 0;
+
+  if (!text && !msg.contact && !isVoice && !isPhoto) return;
   if (bot.status !== "active") return;
   if (bot.monthly_messages_used >= bot.monthly_message_limit) {
     await alertOwner({ botId: bot.id, kind: "limit_reached" });
@@ -62,7 +67,19 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
 
   const conv = await getOrCreateConversation(bot.id, msg);
 
-  // /start — welcome + keyboard
+  // Customer profile — touch (counters, last_seen)
+  if (msg.from?.id) {
+    await touchProfile({
+      botId: bot.id,
+      tgUserId: msg.from.id,
+      displayName:
+        [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" ") || null,
+      phone: msg.contact?.phone_number ?? null,
+      language: msg.from.language_code ?? null,
+    }).catch(() => {});
+  }
+
+  // /start — welcome
   if (text === "/start") {
     if (bot.welcome_message) {
       const buttons = await getDefaultButtons(bot);
@@ -79,7 +96,32 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
     return;
   }
 
-  // Contact — telefon raqami
+  // ─── Voice / Photo → matn ────────────────────────────────────────────
+  if (isVoice && !text) {
+    try {
+      const fileId = msg.voice?.file_id ?? msg.audio?.file_id;
+      if (fileId) {
+        const transcript = await transcribeVoice(token, fileId);
+        text = transcript || "[Ovozli xabar — matnga aylantirib bo'lmadi]";
+      }
+    } catch (e) {
+      console.error("[voice]", (e as Error).message);
+      text = "[Ovozli xabar tushunilmadi]";
+    }
+  }
+
+  if (isPhoto && !text) {
+    try {
+      const largest = msg.photo![msg.photo!.length - 1];
+      const desc = await describePhoto(token, largest.file_id, msg.caption);
+      text = desc;
+    } catch (e) {
+      console.error("[photo]", (e as Error).message);
+      text = msg.caption ?? "[Rasm yuborildi]";
+    }
+  }
+
+  // Contact
   let userText = text;
   if (msg.contact) {
     userText = `[Mijoz telefon yubordi: ${msg.contact.phone_number}]`;
@@ -98,7 +140,6 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
   });
 
   if (conv.status === "waiting_human") {
-    // Mijozga: operatorga uzatildi
     await tg
       .sendMessage(msg.chat.id, "Xabaringizni operatorga uzatdim. Tez orada javob beramiz 🙏")
       .catch(() => {});
@@ -118,6 +159,7 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
   try {
     result = await generateReply({
       bot,
+      conv,
       history: (history ?? []) as Pick<MessageRow, "role" | "content">[],
     });
   } catch (e) {
@@ -156,7 +198,6 @@ async function handleCallback(bot: BotRow, cb: TgCallbackQuery) {
   const token = await getBotToken(bot.id);
   const tg = new TgBot(token);
 
-  // Hammavaqt javob qaytarish kerak — Telegram clientda «yuklanmoqda» yo‘qolishi uchun
   await tg.answerCallbackQuery(cb.id).catch(() => {});
 
   const sb = db();
@@ -200,50 +241,79 @@ async function runAction(
   action: AiAction
 ) {
   const sb = db();
-  switch (action.type) {
-    case "send":
-      await tg.sendMessage(msg.chat.id, action.text, {
-        reply_markup: inlineReplies(),
-      });
-      await sb.from("messages").insert({
-        conversation_id: conv.id,
-        bot_id: bot.id,
-        role: "assistant",
-        content: action.text,
-      });
-      return;
-    case "save_lead":
-      await sb.from("leads").insert({
-        bot_id: bot.id,
-        conversation_id: conv.id,
-        name: action.name ?? conv.customer_name,
-        phone: action.phone ?? conv.customer_phone,
-        request: action.request,
-      });
-      if (bot.admin_chat_id) {
-        const lines = [
-          "🆕 <b>Yangi lead</b>",
-          action.name ? `Ism: ${action.name}` : "",
-          action.phone ? `Tel: ${action.phone}` : "",
-          action.request ? `Talab: ${action.request}` : "",
-          conv.customer_username ? `Telegram: @${conv.customer_username}` : "",
-        ]
-          .filter(Boolean)
-          .join("\n");
-        await tg.sendMessage(bot.admin_chat_id, lines).catch(() => {});
-      }
-      return;
-    case "request_human":
-      await sb.from("conversations").update({ status: "waiting_human" }).eq("id", conv.id);
-      if (bot.admin_chat_id) {
+
+  if (action.type === "send") {
+    await tg.sendMessage(msg.chat.id, action.text, {
+      reply_markup: inlineReplies(),
+    });
+    await sb.from("messages").insert({
+      conversation_id: conv.id,
+      bot_id: bot.id,
+      role: "assistant",
+      content: action.text,
+    });
+    return;
+  }
+
+  if (action.type === "effect") {
+    const eff = action.effect;
+    switch (eff.type) {
+      case "lead_created":
+        if (bot.admin_chat_id) {
+          const lines = [
+            "🆕 <b>Yangi lead</b>",
+            eff.name ? `Ism: ${eff.name}` : "",
+            eff.phone ? `Tel: ${eff.phone}` : "",
+            eff.request ? `Talab: ${eff.request}` : "",
+            conv.customer_username ? `Telegram: @${conv.customer_username}` : "",
+          ]
+            .filter(Boolean)
+            .join("\n");
+          await tg.sendMessage(bot.admin_chat_id, lines).catch(() => {});
+        }
+        return;
+      case "human_requested":
+        if (bot.admin_chat_id) {
+          await tg
+            .sendMessage(
+              bot.admin_chat_id,
+              `🛟 Operator chaqirildi.\nMijoz: ${conv.customer_name ?? "?"} (@${
+                conv.customer_username ?? "?"
+              })\nSabab: ${eff.reason ?? "—"}`
+            )
+            .catch(() => {});
+        }
+        return;
+      case "booking_created":
+        if (bot.admin_chat_id) {
+          await tg
+            .sendMessage(
+              bot.admin_chat_id,
+              `📅 <b>Yangi bron</b>\nXizmat: ${eff.service}\nVaqt: ${eff.slot}\nMijoz: ${conv.customer_name ?? "?"} (@${conv.customer_username ?? "?"})`
+            )
+            .catch(() => {});
+        }
+        return;
+      case "order_created":
+        if (bot.admin_chat_id) {
+          await tg
+            .sendMessage(
+              bot.admin_chat_id,
+              `🛒 <b>Yangi buyurtma</b>\nID: ${eff.orderId.slice(0, 8)}\nJami: ${eff.total.toLocaleString("uz")} so'm\nMijoz: ${conv.customer_name ?? "?"} (@${conv.customer_username ?? "?"})`
+            )
+            .catch(() => {});
+        }
+        return;
+      case "payment_link":
         await tg
-          .sendMessage(
-            bot.admin_chat_id,
-            `🛟 Operator chaqirildi.\nMijoz: ${conv.customer_name ?? "?"} (@${conv.customer_username ?? "?"})\nSabab: ${action.reason ?? "—"}`
-          )
+          .sendMessage(msg.chat.id, `💳 ${eff.description}\nSumma: ${eff.amount.toLocaleString("uz")} so'm`, {
+            reply_markup: {
+              inline_keyboard: [[{ text: "💳 To'lash", url: eff.url }]],
+            },
+          })
           .catch(() => {});
-      }
-      return;
+        return;
+    }
   }
 }
 
@@ -283,7 +353,6 @@ async function getDefaultButtons(bot: BotRow): Promise<string[]> {
     .select("default_buttons")
     .eq("id", bot.template_id)
     .maybeSingle();
-  // jsonb ba'zan string sifatida keladi — parse qilamiz
   let raw = data?.default_buttons ?? [];
   if (typeof raw === "string") {
     try {

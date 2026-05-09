@@ -1,10 +1,14 @@
 // Universal Telegram webhook router. URL: /api/tg/<botId>
-// Telegram secret_token headerini har bir bot uchun unikal saqlaymiz va shu yerda tekshiramiz.
+// - secret_token header validation (per-bot unikal)
+// - update_id deduplication (Telegram retry mexanizmidan himoya)
+// - PII redaction webhook_logs uchun
+// - tez 200 OK javob: og'ir ishlar try/catch ichida
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase/server";
 import { handleUpdate } from "@/lib/runtime";
 import { alertOwner } from "@/lib/alerts";
+import { redactPayload } from "@/lib/redact";
 import type { TgUpdate } from "@/lib/telegram";
 import type { BotRow } from "@/lib/supabase/types";
 
@@ -39,21 +43,40 @@ export async function POST(req: Request, ctx: { params: Promise<{ botId: string 
     return new NextResponse("bad request", { status: 400 });
   }
 
-  // Telegram webhookga 200 javobni tez qaytarish kerak; ishni try/catch ichida qilamiz.
+  // ─── DEDUP ─────────────────────────────────────────────
+  // Telegram bir xil update'ni qayta yuborishi mumkin (network timeout, retry).
+  // Atomic insert via RPC: agar bor bo'lsa false qaytadi → silently skip.
+  if (update.update_id) {
+    try {
+      const { data: isNew } = await sb.rpc("try_mark_update_processed", {
+        p_bot_id: bot.id,
+        p_update_id: update.update_id,
+      });
+      if (isNew === false) {
+        // Duplicate — Telegram'ga 200 qaytaramiz, bekor takror yubormasligi uchun
+        return NextResponse.json({ ok: true, dedup: true });
+      }
+    } catch (e) {
+      // Dedup DB tushsa ham ish davom etadi (fail-open, ammo kamdan-kam dup bo'ladi)
+      console.error("[dedup] failed:", (e as Error).message);
+    }
+  }
+
+  // ─── HANDLE ────────────────────────────────────────────
   try {
     await handleUpdate(bot, update);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const errMsg = (e as Error).message;
+    // PII'ni log'ga yozishdan oldin maskalaymiz
     await sb.from("webhook_logs").insert({
       bot_id: bot.id,
       status: 500,
       error: errMsg,
-      payload: update as unknown as Record<string, unknown>,
+      payload: redactPayload(update as unknown as Record<string, unknown>),
     });
-    // Bot egasini xabardor qilamiz
     await alertOwner({ botId: bot.id, kind: "webhook_error", details: errMsg });
-    // Foydalanuvchini blockda saqlamaslik uchun 200 qaytaramiz, log yozildi
+    // Foydalanuvchini block'da qoldirmaslik uchun 200 qaytaramiz
     return NextResponse.json({ ok: false, error: "handler_error" });
   }
 }

@@ -19,8 +19,12 @@ const ServerEnvSchema = z.object({
   ANTHROPIC_API_KEY: z.string().min(10),
   AI_MODEL: z.string().default("claude-haiku-4-5"),
 
-  // OpenAI (faqat embeddings/KB uchun ixtiyoriy — Anthropic embedding bermaydi)
+  // OpenAI — embeddings (KB RAG) + Whisper (voice STT). Ikkalasi ham ixtiyoriy.
+  // Yo'q bo'lsa: KB qidiruv va voice transcription ishlamaydi, qolgan hammasi ishlaydi.
   OPENAI_API_KEY: z.string().optional(),
+
+  // Cron endpoint'larini himoya qilish (Vercel cron header)
+  CRON_SECRET: z.string().optional(),
 
   // Public
   NEXT_PUBLIC_APP_URL: z.string().url(),

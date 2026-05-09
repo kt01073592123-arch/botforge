@@ -195,7 +195,14 @@ export type TgMessage = {
   chat: { id: number; type: string; first_name?: string; last_name?: string; username?: string };
   date: number;
   text?: string;
+  caption?: string;
   contact?: { phone_number: string; first_name: string; last_name?: string; user_id?: number };
+  // Voice/audio — Whisper STT uchun
+  voice?: { file_id: string; duration: number; mime_type?: string; file_size?: number };
+  audio?: { file_id: string; duration: number; mime_type?: string; file_size?: number };
+  // Photo — Claude Vision uchun (har xil sifatdagi versiyalar massivi)
+  photo?: Array<{ file_id: string; width: number; height: number; file_size?: number }>;
+  document?: { file_id: string; file_name?: string; mime_type?: string; file_size?: number };
   // Bot API 9.6: chat ichida service xabar sifatida keladi
   managed_bot_created?: TgManagedBotCreated;
 };
