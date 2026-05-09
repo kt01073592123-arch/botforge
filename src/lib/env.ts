@@ -19,9 +19,18 @@ const ServerEnvSchema = z.object({
   ANTHROPIC_API_KEY: z.string().min(10),
   AI_MODEL: z.string().default("claude-haiku-4-5"),
 
-  // OpenAI — embeddings (KB RAG) + Whisper (voice STT). Ikkalasi ham ixtiyoriy.
-  // Yo'q bo'lsa: KB qidiruv va voice transcription ishlamaydi, qolgan hammasi ishlaydi.
+  // OpenAI — embeddings (KB RAG) + Whisper (voice STT) + DALL-E (image fallback).
+  // Hammasi ixtiyoriy.
   OPENAI_API_KEY: z.string().optional(),
+
+  // Replicate — Flux Schnell (hero rasm generatsiyasi, eng arzon variant ~$0.003/rasm)
+  REPLICATE_API_TOKEN: z.string().optional(),
+
+  // Unsplash — bepul stock photo fallback
+  UNSPLASH_ACCESS_KEY: z.string().optional(),
+
+  // Vercel Blob — generated rasmlarni permanent saqlash
+  BLOB_READ_WRITE_TOKEN: z.string().optional(),
 
   // Cron endpoint'larini himoya qilish (Vercel cron header)
   CRON_SECRET: z.string().optional(),
