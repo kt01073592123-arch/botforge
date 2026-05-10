@@ -110,16 +110,32 @@ export async function handleUpdate(bot: BotRow, update: TgUpdate): Promise<void>
   }
 
   if (text === "/start") {
-    if (bot.welcome_message) {
+    // A/B test: welcome_message_b set bo'lsa, mijoz tg_user_id juftligiga
+    // qarab variant tanlanadi (sticky — bir mijoz har doim bir xil variantni ko'radi).
+    const botB = (bot as BotRow & { welcome_message_b?: string | null }).welcome_message_b;
+    let welcomeText = bot.welcome_message;
+    let variant: "A" | "B" | null = null;
+    if (welcomeText && botB && msg.from?.id) {
+      variant = msg.from.id % 2 === 0 ? "A" : "B";
+      welcomeText = variant === "A" ? bot.welcome_message : botB;
+      // Conversation'ga variantni yozamiz (yangi yoki mavjud)
+      try {
+        await sb
+          .from("conversations")
+          .update({ welcome_variant: variant })
+          .eq("id", conv.id);
+      } catch {}
+    }
+    if (welcomeText) {
       const buttons = await getDefaultButtons(bot);
-      await tg.sendMessage(msg.chat.id, bot.welcome_message, {
+      await tg.sendMessage(msg.chat.id, welcomeText, {
         reply_markup: buildKeyboard(buttons, bot),
       });
       await sb.from("messages").insert({
         conversation_id: conv.id,
         bot_id: bot.id,
         role: "assistant",
-        content: bot.welcome_message,
+        content: welcomeText,
       });
     }
     return;

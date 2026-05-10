@@ -173,7 +173,10 @@ export default function BotDetailPage() {
           <NavCard href={`/app/bots/${id}/loyalty`} icon="🎫" title="Sodiqlik dasturi" />
           <NavCard href={`/app/bots/${id}/promo`} icon="🎟" title="Promo kodlar" />
           <NavCard href={`/app/bots/${id}/broadcast`} icon="📣" title="Xabar tarqatish" />
+          <NavCard href={`/app/bots/${id}/revenue`} icon="💰" title="Daromad" />
           <NavCard href={`/app/bots/${id}/analytics`} icon="📊" title="Analytics" />
+          <NavCard href={`/app/bots/${id}/ab-test`} icon="🧪" title="A/B test welcome" />
+          <NavCard href={`/app/bots/${id}/diagnostics`} icon="🩺" title="Bot Doctor" />
           <NavCard href={`/app/bots/${id}/settings`} icon="⚙️" title="Sozlamalar" />
         </div>
 
