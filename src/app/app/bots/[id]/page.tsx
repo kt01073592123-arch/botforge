@@ -32,11 +32,24 @@ export default function BotDetailPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [busy, setBusy] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(true);
 
   useEffect(() => {
     refresh();
     fetch(`/api/bots/${id}/stats`).then((r) => r.json()).then((d) => setStats(d.stats));
+    if (typeof window !== "undefined") {
+      const key = `bf_onboard_${id}`;
+      const dismissed = localStorage.getItem(key) === "1";
+      setOnboardingDismissed(dismissed);
+    }
   }, [id]);
+
+  function dismissOnboarding() {
+    setOnboardingDismissed(true);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`bf_onboard_${id}`, "1");
+    }
+  }
 
   // Bot’ning template’idagi brand_kit ni olamiz
   useEffect(() => {
@@ -147,6 +160,15 @@ export default function BotDetailPage() {
           {token && <div className="text-xs text-muted mt-2 font-mono">{token}</div>}
         </div>
 
+        {/* Onboarding hint — birinchi marta + servicelar bo'sh bo'lsa */}
+        {!onboardingDismissed && bot.tg_username && (
+          <OnboardingChecklist
+            botId={id}
+            tgUsername={bot.tg_username}
+            onDismiss={dismissOnboarding}
+          />
+        )}
+
         <div className="grid grid-cols-3 gap-2">
           <Stat label="Bugun suhbat" value={stats?.conversations_today ?? "·"} />
           <Stat label="Bugun lead" value={stats?.leads_today ?? "·"} />
@@ -240,6 +262,105 @@ function Stat({ label, value }: { label: string; value: number | string }) {
     <div className="panel p-3 text-center">
       <div className="text-xl font-bold">{value}</div>
       <div className="text-[11px] text-muted uppercase tracking-wider">{label}</div>
+    </div>
+  );
+}
+
+// Yangi bot egasi uchun checklist — 4 ta qadam.
+// localStorage'da yopilgan bo'lsa qaytarib chiqmaydi.
+function OnboardingChecklist({
+  botId,
+  tgUsername,
+  onDismiss,
+}: {
+  botId: string;
+  tgUsername: string;
+  onDismiss: () => void;
+}) {
+  const [progress, setProgress] = useState<{
+    services: number;
+    customButtons: boolean;
+    promo: boolean;
+    isPublic: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`/api/bots/${botId}/data`).then((r) => r.json()),
+      fetch(`/api/bots/${botId}/promo`).then((r) => r.json()),
+      fetch(`/api/bots/${botId}/explore`).then((r) => r.json()),
+    ]).then(([data, promo, explore]) => {
+      setProgress({
+        services: (data.data?.services ?? []).length,
+        customButtons: !!data.data?.custom_buttons,
+        promo: (promo.codes ?? []).length > 0,
+        isPublic: !!explore.bot?.is_public,
+      });
+    }).catch(() => setProgress(null));
+  }, [botId]);
+
+  if (!progress) return null;
+
+  const steps = [
+    { done: progress.services > 0, label: `Mahsulot qo'shish (${progress.services})`, href: `/app/bots/${botId}/services` },
+    { done: true, label: "Telegram'da /start sinab ko'rish", href: `https://t.me/${tgUsername}`, external: true },
+    { done: progress.promo, label: "Promo kod yaratish (ixtiyoriy)", href: `/app/bots/${botId}/promo` },
+    { done: progress.isPublic, label: "Galereyaga qo'shish", href: `/app/bots/${botId}/share` },
+  ];
+  const completed = steps.filter((s) => s.done).length;
+  const pct = Math.round((completed / steps.length) * 100);
+
+  // Hammasi tugaganda banner avtomatik yashirinadi
+  if (completed === steps.length) return null;
+
+  return (
+    <div className="panel p-4 border-accent/40 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <div className="text-sm font-bold">🚀 Botni to'liq sozlash</div>
+          <div className="text-[11px] text-muted mt-0.5">
+            {completed}/{steps.length} qadam · {pct}% tayyor
+          </div>
+        </div>
+        <button
+          onClick={onDismiss}
+          className="text-xs text-muted hover:text-text"
+          aria-label="Yopish"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="h-1.5 bg-border rounded-full overflow-hidden">
+        <div
+          className="h-full bg-accent rounded-full transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        {steps.map((s, i) => (
+          <a
+            key={i}
+            href={s.href}
+            target={s.external ? "_blank" : undefined}
+            rel={s.external ? "noopener noreferrer" : undefined}
+            className={`flex items-center gap-2 text-sm py-1 ${s.done ? "opacity-50" : ""}`}
+          >
+            <span
+              className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+              style={{
+                background: s.done ? "#10B981" : "rgba(0,0,0,0.06)",
+                color: s.done ? "#fff" : "#6B6B7B",
+              }}
+            >
+              {s.done ? "✓" : i + 1}
+            </span>
+            <span className={s.done ? "line-through" : ""}>{s.label}</span>
+            {!s.done && <span className="text-muted text-xs ml-auto">→</span>}
+          </a>
+        ))}
+      </div>
     </div>
   );
 }

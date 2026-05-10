@@ -278,9 +278,20 @@ export default function CustomerWebApp() {
   const gradient =
     bk.gradient ?? `linear-gradient(135deg, ${primary} 0%, ${accent} 100%)`;
   const textOnPrimary = bk.text_on_primary ?? "#fff";
-  // Light theme: brand tint asosida soft cream/pushti fon, lekin to'q matn.
-  // Brand pushtilik aurora va gradient'lar orqali saqlanadi.
-  const lightBase = `linear-gradient(180deg, #FFFBFD 0%, #FFF0F5 60%, #FFE4EC 100%)`;
+
+  // Telegram theme detection — dark mode bilan moslashish
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
+  const isDarkMode = tg?.colorScheme === "dark";
+
+  // Brand-adaptive bg: oq fon + brand'dan tinted accent. Pushti hardcoded yo'q.
+  const lightBase = `linear-gradient(180deg, #FFFFFF 0%, ${tintHex(primary, 0.04)} 50%, ${tintHex(accent, 0.08)} 100%)`;
+  const darkBase = `linear-gradient(180deg, #0F0E1A 0%, ${tintHex(primary, 0.15)} 60%, #0A0814 100%)`;
+  const baseBg = isDarkMode ? darkBase : lightBase;
+  const textColor = isDarkMode ? "#F5F5F7" : "#1A1B2E";
+  const mutedColor = isDarkMode ? "#9B9BAB" : "#6B6B7B";
+  const cardBg = isDarkMode ? "rgba(255,255,255,0.04)" : "#FFFFFF";
+  const cardBorder = isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
 
   // ==========================================================================
   // RENDER
@@ -289,13 +300,13 @@ export default function CustomerWebApp() {
     <div
       className="min-h-screen pb-28 relative overflow-x-hidden"
       style={{
-        background: lightBase,
-        color: "#1A1B2E",
+        background: baseBg,
+        color: textColor,
         paddingTop: "max(env(safe-area-inset-top), 0.75rem)",
       }}
     >
-      {/* Aurora background — light theme'da juda nozik */}
-      <AuroraBgLight primary={primary} accent={accent} />
+      {/* Soft mesh background — yumshoqroq, brand'ga moslashgan */}
+      <SoftMeshBg primary={primary} accent={accent} dark={isDarkMode} />
 
       {/* Header */}
       <header className="relative px-4 pt-5 pb-4 z-10">
@@ -508,35 +519,42 @@ export default function CustomerWebApp() {
 }
 
 // ==========================================================================
-// AURORA BACKGROUND - light theme'da nozik blob effekti
+// SOFT MESH BG — chalg'imaydigan yumshoq glow (light va dark uchun)
 // ==========================================================================
-function AuroraBgLight({ primary, accent }: { primary: string; accent: string }) {
+function SoftMeshBg({
+  primary,
+  accent,
+  dark,
+}: {
+  primary: string;
+  accent: string;
+  dark: boolean;
+}) {
+  // Light: 8-12% opacity, dark: 25-35% (qora fonda yorqinroq glow kerak)
+  const op1 = dark ? 0.32 : 0.10;
+  const op2 = dark ? 0.25 : 0.08;
   return (
     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
       <div
-        className="absolute -top-40 -left-32 w-[420px] h-[420px] rounded-full opacity-25 blur-3xl"
-        style={{ background: primary, animation: "auroraFloat 20s ease-in-out infinite" }}
+        className="absolute -top-32 -right-24 w-[380px] h-[380px] rounded-full blur-3xl"
+        style={{ background: primary, opacity: op1 }}
       />
       <div
-        className="absolute top-1/3 -right-40 w-[480px] h-[480px] rounded-full opacity-20 blur-3xl"
-        style={{ background: accent, animation: "auroraFloat 25s ease-in-out infinite reverse" }}
+        className="absolute top-1/2 -left-32 w-[320px] h-[320px] rounded-full blur-3xl"
+        style={{ background: accent, opacity: op2 }}
       />
-      <div
-        className="absolute bottom-10 left-1/4 w-[360px] h-[360px] rounded-full opacity-15 blur-3xl"
-        style={{
-          background: `linear-gradient(135deg, ${primary}, ${accent})`,
-          animation: "auroraFloat 30s ease-in-out infinite",
-        }}
-      />
-      <style>{`
-        @keyframes auroraFloat {
-          0%,100% { transform: translate(0,0) scale(1); }
-          33% { transform: translate(40px,-30px) scale(1.1); }
-          66% { transform: translate(-30px,20px) scale(0.95); }
-        }
-      `}</style>
     </div>
   );
+}
+
+// Hex'dan rgba(r,g,b,alpha) ga aylantiruvchi utility
+function tintHex(hex: string, alpha: number): string {
+  const m = hex.match(/^#?([0-9a-f]{6})$/i);
+  if (!m) return `rgba(0,0,0,${alpha})`;
+  const r = parseInt(m[1].slice(0, 2), 16);
+  const g = parseInt(m[1].slice(2, 4), 16);
+  const b = parseInt(m[1].slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 // ==========================================================================
@@ -1024,6 +1042,18 @@ function OrderCard({
             ... va yana {order.items.length - 3} ta
           </div>
         )}
+      </div>
+      <div className="flex items-center justify-between gap-2 mt-1">
+        <a
+          href={`/receipt/${order.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] font-medium underline"
+          style={{ color: primary }}
+        >
+          📄 Chek
+        </a>
+        <div></div>
       </div>
       <div
         className="text-base font-extrabold tracking-tight"
@@ -1742,6 +1772,68 @@ function CartModal({
     }
   }
 
+  // ==== Telegram native MainButton + BackButton integratsiyasi ====
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
+
+  useEffect(() => {
+    if (!tg?.MainButton) return;
+    if (done) {
+      tg.MainButton.hide();
+      return;
+    }
+    if (step === "cart") {
+      tg.MainButton.setText(t("mini_checkout_btn"));
+      tg.MainButton.show();
+      tg.MainButton.enable();
+      const handler = () => setStep("checkout");
+      tg.MainButton.onClick(handler);
+      return () => tg.MainButton.offClick(handler);
+    }
+    if (step === "checkout") {
+      const label = phone
+        ? `${t("mini_confirm")} · ${finalTotal.toLocaleString("uz-UZ")} so'm`
+        : t("mini_field_phone");
+      tg.MainButton.setText(label);
+      tg.MainButton.show();
+      if (phone && !submitting) {
+        tg.MainButton.enable();
+      } else {
+        tg.MainButton.disable();
+      }
+      const handler = () => {
+        if (phone && !submitting) submit();
+      };
+      tg.MainButton.onClick(handler);
+      return () => tg.MainButton.offClick(handler);
+    }
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, phone, finalTotal, submitting, done]);
+
+  useEffect(() => {
+    if (!tg?.BackButton) return;
+    if (step === "checkout") {
+      tg.BackButton.show();
+      const handler = () => setStep("cart");
+      tg.BackButton.onClick(handler);
+      return () => tg.BackButton.offClick(handler);
+    } else {
+      tg.BackButton.hide();
+    }
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // Modal yopilganda tugmalarni tozalash
+  useEffect(() => {
+    return () => {
+      if (tg?.MainButton) tg.MainButton.hide();
+      if (tg?.BackButton) tg.BackButton.hide();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end">
       <div
@@ -2068,10 +2160,75 @@ function LangSwitcher({
 }
 
 function SkeletonShell() {
+  // Real Mini App layout'ni taqlid qiluvchi skeleton — "Yuklanmoqda" matni o'rniga
+  // foydalanuvchi nima ko'rishini taxmin qiladi (6 ta product card placeholder).
+  const shimmerStyle: React.CSSProperties = {
+    background:
+      "linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 75%)",
+    backgroundSize: "200% 100%",
+    animation: "shimmer 1.4s ease-in-out infinite",
+  };
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: "#FFFBFD", color: "#9B9BAB" }}>
-      <div className="w-16 h-16 rounded-3xl animate-pulse mb-3" style={{ background: "rgba(0,0,0,0.05)" }} />
-      <div className="text-xs">{t("mini_loading")}</div>
+    <div
+      className="min-h-screen pb-28"
+      style={{
+        background: "linear-gradient(180deg, #FFFFFF 0%, #FAFAFC 100%)",
+        paddingTop: "max(env(safe-area-inset-top), 0.75rem)",
+      }}
+    >
+      {/* Header skeleton */}
+      <div className="px-4 pt-5 pb-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-2xl" style={shimmerStyle} />
+          <div className="w-14 h-14 rounded-2xl" style={shimmerStyle} />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3.5 rounded w-1/2" style={shimmerStyle} />
+            <div className="h-2.5 rounded w-2/3" style={shimmerStyle} />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <div className="h-7 w-32 rounded-full" style={shimmerStyle} />
+          <div className="h-7 w-24 rounded-full" style={shimmerStyle} />
+        </div>
+      </div>
+
+      {/* Search skeleton */}
+      <div className="px-4 mt-2">
+        <div className="h-12 rounded-2xl" style={shimmerStyle} />
+      </div>
+
+      {/* Categories skeleton */}
+      <div className="px-3 mt-4 flex gap-2 overflow-hidden">
+        {[60, 80, 70, 90, 65].map((w, i) => (
+          <div key={i} className="h-8 rounded-2xl shrink-0" style={{ ...shimmerStyle, width: w }} />
+        ))}
+      </div>
+
+      {/* Products grid skeleton */}
+      <div className="px-3 mt-5 grid grid-cols-2 gap-2.5">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-2xl overflow-hidden bg-white shadow-sm"
+            style={{ border: "1px solid rgba(0,0,0,0.06)" }}
+          >
+            <div className="aspect-square" style={shimmerStyle} />
+            <div className="p-2.5 space-y-2">
+              <div className="h-3 rounded" style={shimmerStyle} />
+              <div className="h-3 rounded w-2/3" style={shimmerStyle} />
+              <div className="h-5 rounded w-1/2 mt-2" style={shimmerStyle} />
+              <div className="h-7 rounded-xl mt-2" style={shimmerStyle} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -40,7 +40,20 @@ export default function CustomersPage() {
 
   return (
     <div>
-      <Topbar title="Mijozlar (CRM)" back="back" />
+      <Topbar
+        title="Mijozlar (CRM)"
+        back="back"
+        right={
+          <a
+            href={`/api/bots/${id}/export?type=customers`}
+            download
+            className="px-2.5 py-1 rounded-full text-[11px] font-semibold border border-border bg-panel text-muted"
+            title="CSV export"
+          >
+            ⬇ CSV
+          </a>
+        }
+      />
       <div className="max-w-3xl mx-auto px-4 py-4 space-y-3">
         <input
           className="input"

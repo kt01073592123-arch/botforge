@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import clsx from "clsx";
@@ -62,13 +62,57 @@ export default function OrdersPage() {
   const [filter, setFilter] = useState<"active" | "all" | Status>("active");
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const knownIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    // Sound preference localStorage'dan o'qiymiz
+    if (typeof window !== "undefined") {
+      setSoundEnabled(localStorage.getItem("bf_orders_sound") === "1");
+    }
+  }, []);
 
   useEffect(() => {
     load();
+    // Har 20 soniyada yangi buyurtmalarni tekshiramiz (faqat "active" filterda)
+    if (filter !== "active") return;
+    const t = setInterval(load, 20000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, filter]);
 
+  function toggleSound() {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("bf_orders_sound", next ? "1" : "0");
+    }
+    if (next) playBeep(); // test ovoz
+  }
+
+  function playBeep() {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Ctx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+      const ctx = new Ctx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    } catch {}
+  }
+
   async function load() {
-    setLoading(true);
+    const wasInitialLoad = knownIdsRef.current.size === 0;
+    if (wasInitialLoad) setLoading(true);
     const params = new URLSearchParams();
     if (filter === "active") {
       ["pending", "confirmed", "in_progress"].forEach((s) => params.append("status", s));
@@ -76,8 +120,33 @@ export default function OrdersPage() {
       params.set("status", filter);
     }
     const r = await fetch(`/api/bots/${id}/orders?${params}`).then((r) => r.json());
-    setOrders(r.orders ?? []);
+    const list: Order[] = r.orders ?? [];
+
+    // Yangi buyurtma kelganligini aniqlash
+    if (!wasInitialLoad && filter === "active") {
+      const newOrders = list.filter(
+        (o) => !knownIdsRef.current.has(o.id) && o.status === "pending",
+      );
+      if (newOrders.length > 0) {
+        if (soundEnabled) playBeep();
+        // Browser notification (agar permission berilgan bo'lsa)
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+          new Notification(`🆕 ${newOrders.length} yangi buyurtma`, {
+            body: newOrders[0].customer_name ?? newOrders[0].customer_phone ?? "Mijoz",
+            tag: "new-order",
+          });
+        }
+      }
+    }
+    knownIdsRef.current = new Set(list.map((o) => o.id));
+    setOrders(list);
     setLoading(false);
+  }
+
+  async function requestNotifPermission() {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      await Notification.requestPermission();
+    }
   }
 
   async function changeStatus(orderId: string, status: Status) {
@@ -103,6 +172,42 @@ export default function OrdersPage() {
     <div>
       <Topbar title="Buyurtmalar" back="back" />
       <div className="max-w-3xl mx-auto px-4 py-4 space-y-3">
+        {/* Sound + notification controls */}
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={toggleSound}
+            className={clsx(
+              "px-3 py-1.5 rounded-full text-xs font-semibold border",
+              soundEnabled
+                ? "bg-accent/15 border-accent text-accent"
+                : "bg-panel border-border text-muted",
+            )}
+            title="Yangi buyurtma kelganda ovoz"
+          >
+            {soundEnabled ? "🔔 Ovoz yoq" : "🔕 Ovoz o'ch"}
+          </button>
+          {typeof window !== "undefined" && "Notification" in window && Notification.permission === "default" && (
+            <button
+              onClick={requestNotifPermission}
+              className="px-3 py-1.5 rounded-full text-xs font-semibold border border-border bg-panel text-muted"
+              title="Browser notification ruxsatini so'rash"
+            >
+              📲 Notification yoqish
+            </button>
+          )}
+          <a
+            href={`/api/bots/${id}/export?type=orders`}
+            download
+            className="px-3 py-1.5 rounded-full text-xs font-semibold border border-border bg-panel text-muted ml-auto"
+            title="CSV export (Excel'da ochiladi)"
+          >
+            ⬇ CSV
+          </a>
+        </div>
+        <div className="text-[10px] text-muted text-right">
+          Avto-yangilanish: 20s
+        </div>
+
         <div className="flex gap-1.5 overflow-x-auto pb-1">
           <Chip active={filter === "active"} onClick={() => setFilter("active")}>
             Faol
