@@ -94,6 +94,29 @@ export default function ServicesPage() {
     if (expandedItem === i) setExpandedItem(null);
   }
 
+  // Bulk import — har qator: "nom, narx, tavsif (ixtiyoriy)"
+  function bulkImport(text: string): number {
+    if (!data) return 0;
+    const lines = text
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const parsed: ServiceItem[] = [];
+    for (const line of lines) {
+      // CSV split (eng oddiy — vergul bo'yicha)
+      const parts = line.split(",").map((p) => p.trim());
+      const name = parts[0];
+      const price = parts[1] ?? "";
+      const description = parts.slice(2).join(", ").trim() || undefined;
+      if (!name) continue;
+      parsed.push({ name, price, description, in_stock: true });
+    }
+    if (parsed.length > 0) {
+      setData({ ...data, services: [...data.services, ...parsed] });
+    }
+    return parsed.length;
+  }
+
   function addCategory() {
     if (!data) return;
     const cats = data.categories ?? [];
@@ -188,9 +211,12 @@ export default function ServicesPage() {
                 onRemove={() => removeService(i)}
               />
             ))}
-            <button type="button" className="btn-ghost w-full" onClick={addService}>
-              + Mahsulot/xizmat qo‘shish
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" className="btn-ghost" onClick={addService}>
+                + Bitta qo&apos;shish
+              </button>
+              <BulkImportButton onImport={bulkImport} />
+            </div>
           </div>
         </Section>
 
@@ -385,6 +411,8 @@ function ServiceCard({
               botId={botId}
               value={service.photo_url}
               onChange={(url) => onChange({ photo_url: url })}
+              productName={service.name}
+              productDescription={service.description}
             />
           </div>
 
@@ -477,5 +505,88 @@ function Section({
       </div>
       {children}
     </section>
+  );
+}
+
+function BulkImportButton({
+  onImport,
+}: {
+  onImport: (text: string) => number;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [info, setInfo] = useState<string | null>(null);
+
+  function apply() {
+    const n = onImport(text);
+    if (n === 0) {
+      setInfo("Hech narsa import qilinmadi");
+      return;
+    }
+    setInfo(`✓ ${n} ta mahsulot qo'shildi. Yuqorida ko'ring va saqlash bosing.`);
+    setText("");
+    setTimeout(() => {
+      setOpen(false);
+      setInfo(null);
+    }, 2000);
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="btn-ghost" onClick={() => setOpen(true)}>
+        📋 Bulk import
+      </button>
+    );
+  }
+
+  return (
+    <div className="col-span-2 panel p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-semibold">📋 Bulk import</div>
+        <button
+          type="button"
+          className="text-xs text-muted"
+          onClick={() => setOpen(false)}
+        >
+          ✕
+        </button>
+      </div>
+      <div className="text-[11px] text-muted leading-relaxed">
+        Har qator bitta mahsulot. Format: <code>nom, narx, tavsif</code>
+        <br />
+        Tavsif ixtiyoriy. Vergul bo&apos;lsa, qo&apos;shtirnoq ishlatmang — sodda matn yozing.
+      </div>
+      <textarea
+        className="input min-h-[140px] font-mono !text-xs"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={`Niacinamide serum, 120000 so'm, 30ml shisha
+SPF 50+ kunlik krem, 150000 so'm, 50ml
+Hyaluronic acid kremi, 110000 so'm
+Soch maskasi, 85000 so'm, 250ml`}
+      />
+      <div className="flex gap-2">
+        <button
+          type="button"
+          className="btn-primary !py-1.5 !text-xs flex-1"
+          onClick={apply}
+          disabled={!text.trim()}
+        >
+          Qo&apos;shish
+        </button>
+        <button
+          type="button"
+          className="btn-ghost !py-1.5 !text-xs"
+          onClick={() => setText("")}
+        >
+          Tozalash
+        </button>
+      </div>
+      {info && (
+        <div className={`text-xs ${info.startsWith("✓") ? "text-accent" : "text-muted"}`}>
+          {info}
+        </div>
+      )}
+    </div>
   );
 }

@@ -6,14 +6,21 @@ export default function PhotoInput({
   botId,
   value,
   onChange,
+  productName,
+  productDescription,
 }: {
   botId: string;
   value: string | undefined;
   onChange: (url: string | undefined) => void;
+  // Mahsulot uchun AI rasm yaratish — bo'lsa "AI rasm" tugmasi chiqadi.
+  productName?: string;
+  productDescription?: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [aiInfo, setAiInfo] = useState<string | null>(null);
 
   async function handleFile(file: File) {
     setBusy(true);
@@ -32,6 +39,40 @@ export default function PhotoInput({
       setErr((e as Error).message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleAiGenerate() {
+    if (!productName || productName.trim().length < 2) {
+      setErr("Avval mahsulot nomini kiriting");
+      return;
+    }
+    setAiBusy(true);
+    setErr(null);
+    setAiInfo(null);
+    try {
+      const res = await fetch(`/api/bots/${botId}/services/generate-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productName,
+          description: productDescription,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      onChange(d.url);
+      const providerLabel: Record<string, string> = {
+        unsplash: "Unsplash (real photo)",
+        replicate: "AI generatsiya",
+        picsum: "Placeholder (fallback)",
+      };
+      setAiInfo(`✓ ${providerLabel[d.provider] ?? d.provider}`);
+      setTimeout(() => setAiInfo(null), 4000);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setAiBusy(false);
     }
   }
 
@@ -55,7 +96,7 @@ export default function PhotoInput({
               onChange={(e) => onChange(e.target.value || undefined)}
               placeholder="https://..."
             />
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
@@ -64,6 +105,17 @@ export default function PhotoInput({
               >
                 {busy ? "Yuklanmoqda…" : "📷 Almashtirish"}
               </button>
+              {productName && (
+                <button
+                  type="button"
+                  onClick={handleAiGenerate}
+                  disabled={aiBusy}
+                  className="btn-ghost !py-1 !px-2 !text-[11px]"
+                  title="Mahsulot nomi bo'yicha rasm topadi yoki AI yaratadi"
+                >
+                  {aiBusy ? "🤖 Yaratilmoqda…" : "🤖 AI rasm"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => onChange(undefined)}
@@ -76,14 +128,29 @@ export default function PhotoInput({
         </div>
       ) : (
         <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={busy}
-            className="btn-ghost w-full !py-3 !text-sm"
-          >
-            {busy ? "Yuklanmoqda…" : "📷 Rasm yuklash"}
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={busy}
+              className="btn-ghost !py-3 !text-sm"
+            >
+              {busy ? "Yuklanmoqda…" : "📷 Rasm yuklash"}
+            </button>
+            <button
+              type="button"
+              onClick={handleAiGenerate}
+              disabled={aiBusy || !productName}
+              className="btn-ghost !py-3 !text-sm disabled:opacity-50"
+              title={
+                !productName
+                  ? "Avval mahsulot nomini kiriting"
+                  : "Unsplash'dan topadi yoki AI yaratadi"
+              }
+            >
+              {aiBusy ? "🤖 Yaratilmoqda…" : "🤖 AI orqali"}
+            </button>
+          </div>
           <div className="text-[11px] text-muted text-center">
             yoki URL’ni quyiga yopishtiring
           </div>
@@ -94,6 +161,7 @@ export default function PhotoInput({
           />
         </div>
       )}
+      {aiInfo && <div className="text-accent text-xs mt-1">{aiInfo}</div>}
       {err && <div className="text-danger text-xs mt-1">{err}</div>}
       <input
         ref={fileRef}
