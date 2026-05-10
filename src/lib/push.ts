@@ -4,12 +4,16 @@
 import webpush from "web-push";
 import { sql } from "./db";
 
+function stripBom(s: string | undefined): string | undefined {
+  return s?.replace(/^﻿/, "").trim();
+}
+
 let configured = false;
 function ensureConfigured(): boolean {
   if (configured) return true;
-  const pub = process.env.VAPID_PUBLIC_KEY;
-  const priv = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT ?? "mailto:noreply@botforge.uz";
+  const pub = stripBom(process.env.VAPID_PUBLIC_KEY);
+  const priv = stripBom(process.env.VAPID_PRIVATE_KEY);
+  const subject = stripBom(process.env.VAPID_SUBJECT) ?? "mailto:noreply@botforge.uz";
   if (!pub || !priv) return false;
   webpush.setVapidDetails(subject, pub, priv);
   configured = true;
@@ -92,5 +96,5 @@ export async function sendPushToCustomer(opts: {
 }
 
 export function getPublicVapidKey(): string | null {
-  return process.env.VAPID_PUBLIC_KEY ?? null;
+  return stripBom(process.env.VAPID_PUBLIC_KEY) ?? null;
 }
