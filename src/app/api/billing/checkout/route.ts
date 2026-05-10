@@ -8,13 +8,14 @@ import { requireSession } from "@/lib/auth";
 import { db } from "@/lib/supabase/server";
 import { listPlans } from "@/lib/billing";
 import { buildClickPaymentUrl } from "@/lib/click";
+import { buildPaymeCheckoutUrl } from "@/lib/payme";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const Body = z.object({
   plan_id: z.enum(["start", "pro", "max"]),
-  provider: z.enum(["click"]).default("click"),
+  provider: z.enum(["click", "payme"]).default("click"),
 });
 
 export async function POST(req: Request) {
@@ -31,34 +32,54 @@ export async function POST(req: Request) {
     const { error } = await db().from("payments").insert({
       user_id: s.uid,
       plan_id: plan.id,
-      provider: "click",
+      provider: body.provider,
       merchant_trans_id: merchantTransId,
       amount_uzs: plan.price_uzs,
       status: "pending",
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    const serviceId = Number(process.env.CLICK_SERVICE_ID);
-    const merchantId = Number(process.env.CLICK_MERCHANT_ID);
-    if (!serviceId || !merchantId) {
-      return NextResponse.json(
-        {
-          error:
-            "Click konfiguratsiya qilinmagan. CLICK_SERVICE_ID va CLICK_MERCHANT_ID env’ga qo‘shing.",
-        },
-        { status: 500 }
-      );
+    if (body.provider === "click") {
+      const serviceId = Number(process.env.CLICK_SERVICE_ID);
+      const merchantId = Number(process.env.CLICK_MERCHANT_ID);
+      if (!serviceId || !merchantId) {
+        return NextResponse.json(
+          {
+            error:
+              "Click konfiguratsiya qilinmagan. CLICK_SERVICE_ID va CLICK_MERCHANT_ID env'ga qo'shing.",
+          },
+          { status: 500 },
+        );
+      }
+      const url = buildClickPaymentUrl({
+        serviceId,
+        merchantId,
+        amount: plan.price_uzs,
+        transactionParam: merchantTransId,
+        returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/app/billing?status=back`,
+      });
+      return NextResponse.json({ url, merchant_trans_id: merchantTransId, provider: "click" });
     }
 
-    const url = buildClickPaymentUrl({
-      serviceId,
-      merchantId,
-      amount: plan.price_uzs,
-      transactionParam: merchantTransId,
-      returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/app/billing?status=back`,
-    });
+    if (body.provider === "payme") {
+      const merchantId = process.env.PAYME_MERCHANT_ID;
+      if (!merchantId) {
+        return NextResponse.json(
+          { error: "Payme konfiguratsiya qilinmagan. PAYME_MERCHANT_ID env'ga qo'shing." },
+          { status: 500 },
+        );
+      }
+      const url = buildPaymeCheckoutUrl({
+        merchantId,
+        amount: plan.price_uzs * 100, // tiyin
+        account: { merchant_trans_id: merchantTransId },
+        returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/app/billing?status=back`,
+        lang: "uz",
+      });
+      return NextResponse.json({ url, merchant_trans_id: merchantTransId, provider: "payme" });
+    }
 
-    return NextResponse.json({ url, merchant_trans_id: merchantTransId });
+    return NextResponse.json({ error: "Provider noma'lum" }, { status: 400 });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });
   }

@@ -31,6 +31,9 @@ const Body = z.object({
     .min(1)
     .max(50),
   total_uzs: z.number().int().nonnegative(),
+  // Promo kod (Mini App'dan) — server qayta tekshiradi
+  promo_code: z.string().max(40).optional(),
+  subtotal_uzs: z.number().int().nonnegative().optional(),
 });
 
 function escapeHtml(s: string): string {
@@ -129,6 +132,34 @@ export async function POST(req: Request, ctx: { params: Promise<{ username: stri
     }
   }
 
+  // Promo kod tekshirish (server-side double-check) — agar kiritilgan bo'lsa
+  let promoDiscount = 0;
+  let promoCodeId: string | null = null;
+  let promoFinalTotal = body.total_uzs;
+  if (body.promo_code) {
+    try {
+      const subtotal = body.subtotal_uzs ?? body.total_uzs;
+      const validateResult = (await import("@/lib/db")).sql();
+      const r = (await validateResult`
+        select public.validate_promo_code(
+          ${bot.id}::uuid,
+          ${body.promo_code},
+          ${subtotal}::int,
+          ${tgUser?.id ?? null}::bigint
+        ) as r
+      `) as Array<{ r: { valid: boolean; discount_uzs?: number; code_id?: string } }>;
+      const v = r[0]?.r;
+      if (v?.valid && v.code_id && v.discount_uzs) {
+        promoCodeId = v.code_id;
+        promoDiscount = v.discount_uzs;
+        // Agar Mini App total_uzs noto'g'ri bo'lsa server hisoblagan total ishlatamiz
+        promoFinalTotal = Math.max(0, subtotal - v.discount_uzs);
+      }
+    } catch {
+      // Promo invalid bo'lsa buyurtma davom etadi (chegirma berilmaydi)
+    }
+  }
+
   // Order yaratamiz (yangi v4 — order lifecycle)
   const { data: orderRow } = await sb
     .from("orders")
@@ -140,12 +171,31 @@ export async function POST(req: Request, ctx: { params: Promise<{ username: stri
       customer_tg_id: tgUser?.id ?? null,
       customer_tg_username: tgUser?.username ?? null,
       items: body.items,
-      total_uzs: body.total_uzs,
+      total_uzs: promoFinalTotal,
       note: body.note,
     })
     .select("id")
     .single();
   const orderId = (orderRow?.id as string | undefined) ?? null;
+
+  // Promo kod ishlatilishini yozish (agar valid bo'lsa)
+  if (promoCodeId && orderId && promoDiscount > 0) {
+    try {
+      const dbSql = (await import("@/lib/db")).sql();
+      await dbSql`
+        insert into public.promo_code_uses
+          (promo_code_id, bot_id, customer_tg_id, customer_phone, order_id, discount_uzs)
+        values
+          (${promoCodeId}::uuid, ${bot.id}::uuid, ${tgUser?.id ?? null}::bigint,
+           ${body.customer_phone}, ${orderId}::uuid, ${promoDiscount}::int)
+      `;
+      await dbSql`
+        update public.promo_codes set used_count = used_count + 1 where id = ${promoCodeId}::uuid
+      `;
+    } catch (e) {
+      console.error("[promo-record]", (e as Error).message);
+    }
+  }
 
   // Customer profile yangilash
   if (tgUser?.id) {
@@ -191,7 +241,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ username: stri
           (it) => `• ${escapeHtml(it.name)} × ${it.qty} = ${escapeHtml(it.price)}`
         ),
         "",
-        `<b>JAMI: ${body.total_uzs.toLocaleString("uz-UZ")} so'm</b>`,
+        promoDiscount > 0
+          ? `🎟 Promo: <b>${escapeHtml(body.promo_code ?? "")}</b> (-${promoDiscount.toLocaleString("uz-UZ")} so'm)`
+          : "",
+        `<b>JAMI: ${promoFinalTotal.toLocaleString("uz-UZ")} so'm</b>`,
         "",
         body.note ? `Izoh: ${escapeHtml(body.note)}` : "",
       ]

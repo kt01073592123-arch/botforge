@@ -1492,6 +1492,48 @@ function CartModal({
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
+  // Promo kod
+  const [promoInput, setPromoInput] = useState("");
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promoApplied, setPromoApplied] = useState<{
+    code: string;
+    discount: number;
+  } | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+
+  const finalTotal = Math.max(0, total - (promoApplied?.discount ?? 0));
+
+  async function applyPromo() {
+    if (!promoInput.trim()) return;
+    setPromoBusy(true);
+    setPromoError(null);
+    try {
+      const res = await fetch(`/api/public/${username}/promo-validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: promoInput.trim(),
+          total_uzs: total,
+          init_data: tgInitData,
+          tg_id: tgUserId ?? undefined,
+        }),
+      });
+      const d = await res.json();
+      if (!d.valid) {
+        setPromoError(d.error ?? "Kod yaroqsiz");
+        return;
+      }
+      setPromoApplied({
+        code: promoInput.trim().toUpperCase(),
+        discount: d.discount_uzs ?? 0,
+      });
+      setPromoInput("");
+      haptic("light");
+    } finally {
+      setPromoBusy(false);
+    }
+  }
+
   async function submit() {
     if (!phone) return;
     setSubmitting(true);
@@ -1509,7 +1551,9 @@ function CartModal({
             price: c.service.price,
             qty: c.qty,
           })),
-          total_uzs: total,
+          total_uzs: finalTotal,
+          subtotal_uzs: total,
+          promo_code: promoApplied?.code,
         }),
       });
       const d = await res.json();
@@ -1671,28 +1715,98 @@ function CartModal({
                     </div>
                   )}
                 </div>
-                <div className="flex justify-between mt-2 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-                  <span className="text-xs font-bold">Jami:</span>
-                  <span
-                    className="font-extrabold"
-                    style={{
-                      backgroundImage: gradient,
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                    }}
-                  >
-                    {total.toLocaleString("uz-UZ")} so&apos;m
-                  </span>
+                <div className="space-y-1 mt-2 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+                  {promoApplied && (
+                    <div className="flex justify-between text-xs" style={{ color: "#10B981" }}>
+                      <span>🎟 {promoApplied.code}</span>
+                      <span>−{promoApplied.discount.toLocaleString("uz-UZ")} so&apos;m</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-xs font-bold">Jami:</span>
+                    <span
+                      className="font-extrabold"
+                      style={{
+                        backgroundImage: gradient,
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        backgroundClip: "text",
+                      }}
+                    >
+                      {finalTotal.toLocaleString("uz-UZ")} so&apos;m
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              {/* Promo kod */}
+              <div
+                className="rounded-xl p-3 space-y-2"
+                style={{ background: "#FAFAFC", border: "1px solid rgba(0,0,0,0.08)" }}
+              >
+                <div className="text-[11px] font-medium" style={{ color: "#6B6B7B" }}>
+                  🎟 Promo kod (ixtiyoriy)
+                </div>
+                {promoApplied ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 text-sm">
+                      <span className="font-mono font-bold" style={{ color: "#10B981" }}>
+                        ✓ {promoApplied.code}
+                      </span>
+                      <span className="text-xs ml-2" style={{ color: "#6B6B7B" }}>
+                        −{promoApplied.discount.toLocaleString("uz-UZ")} so&apos;m
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPromoApplied(null)}
+                      className="text-xs"
+                      style={{ color: "#9B9BAB" }}
+                    >
+                      O&apos;chirish
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={promoInput}
+                      onChange={(e) => {
+                        setPromoInput(e.target.value.toUpperCase());
+                        setPromoError(null);
+                      }}
+                      placeholder="TUG10"
+                      className="flex-1 px-3 py-2 rounded-lg text-sm bg-white outline-none font-mono"
+                      style={{
+                        border: "1px solid rgba(0,0,0,0.08)",
+                        color: "#1A1B2E",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={applyPromo}
+                      disabled={promoBusy || !promoInput.trim()}
+                      className="px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-50"
+                      style={{ background: gradient, color: "#fff" }}
+                    >
+                      {promoBusy ? "..." : "Qo'llash"}
+                    </button>
+                  </div>
+                )}
+                {promoError && (
+                  <div className="text-xs" style={{ color: "#EF4444" }}>
+                    {promoError}
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={submit}
                 disabled={submitting || !phone}
                 className="w-full py-3 rounded-2xl font-bold text-sm transition active:scale-95 disabled:opacity-50"
-                style={{ background: gradient, color: "#fff" }}
+                style={{ background: gradient, color: "#fff", boxShadow: `0 8px 20px ${primary}55` }}
               >
-                {submitting ? "Yuborilmoqda..." : "✅ Tasdiqlash"}
+                {submitting ? "Yuborilmoqda..." : `✅ Tasdiqlash (${finalTotal.toLocaleString("uz-UZ")} so'm)`}
               </button>
             </div>
           </>

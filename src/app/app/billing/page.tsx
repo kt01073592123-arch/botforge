@@ -13,6 +13,7 @@ type PlanWithSub = {
 export default function BillingPage() {
   const [data, setData] = useState<PlanWithSub | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [provider, setProvider] = useState<"click" | "payme">("click");
 
   useEffect(() => {
     fetch("/api/billing/plans")
@@ -26,7 +27,7 @@ export default function BillingPage() {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan_id: planId }),
+        body: JSON.stringify({ plan_id: planId, provider }),
       });
       const d = await res.json();
       if (!res.ok) {
@@ -58,6 +59,35 @@ export default function BillingPage() {
             )}
           </div>
         )}
+
+        {/* To'lov turi */}
+        <div className="panel p-3">
+          <div className="text-xs text-muted uppercase tracking-wider mb-2">
+            To&apos;lov tizimi
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setProvider("click")}
+              className={clsx(
+                "panel p-2.5 text-sm transition",
+                provider === "click" && "border-accent",
+              )}
+            >
+              <div className="font-bold">Click</div>
+              <div className="text-[11px] text-muted">UzCard, Humo</div>
+            </button>
+            <button
+              onClick={() => setProvider("payme")}
+              className={clsx(
+                "panel p-2.5 text-sm transition",
+                provider === "payme" && "border-accent",
+              )}
+            >
+              <div className="font-bold">Payme</div>
+              <div className="text-[11px] text-muted">Karta + balans</div>
+            </button>
+          </div>
+        </div>
 
         <div className="grid gap-3">
           {data.plans.map((p) => {
@@ -109,7 +139,7 @@ export default function BillingPage() {
         </div>
 
         <div className="text-xs text-muted text-center">
-          To‘lov Click orqali. Karta saqlanmaydi, har oy mustaqil to‘laysiz.
+          To&apos;lov {provider === "click" ? "Click" : "Payme"} orqali. Karta saqlanmaydi, har oy mustaqil to&apos;laysiz.
         </div>
       </div>
     </div>
