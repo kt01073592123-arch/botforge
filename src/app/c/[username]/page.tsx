@@ -40,6 +40,7 @@ type BotData = {
   services: Service[];
   categories: Category[];
   contacts: { phone?: string; address?: string; instagram?: string };
+  is_white_label?: boolean;
 };
 
 type CartItem = { product_id: string; service: Service; qty: number };
@@ -1448,10 +1449,12 @@ function Drawer({
           </div>
         )}
 
-        {/* Powered by */}
-        <div className="absolute bottom-4 left-4 right-4 text-center text-[9px]" style={{ color: "#C5C5D2" }}>
-          Powered by BotForge
-        </div>
+        {/* Powered by — Max tarifda yashiriladi (white-label) */}
+        {!data.is_white_label && (
+          <div className="absolute bottom-4 left-4 right-4 text-center text-[9px]" style={{ color: "#C5C5D2" }}>
+            Powered by BotForge
+          </div>
+        )}
       </div>
     </div>
   );

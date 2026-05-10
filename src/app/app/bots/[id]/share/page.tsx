@@ -23,6 +23,13 @@ export default function SharePage() {
   const [polishMsg, setPolishMsg] = useState<string | null>(null);
   const [polishing, setPolishing] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [exploreState, setExploreState] = useState<{
+    is_public: boolean;
+    description: string | null;
+    explore_category: string | null;
+  } | null>(null);
+  const [explBusy, setExplBusy] = useState(false);
+  const [explSaved, setExplSaved] = useState(false);
 
   useEffect(() => {
     fetch(`/api/bots/${id}/share`)
@@ -31,7 +38,33 @@ export default function SharePage() {
         if (d.error) setPolishMsg(d.error);
         else setInfo(d);
       });
+    fetch(`/api/bots/${id}/explore`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.bot) setExploreState(d.bot);
+      });
   }, [id]);
+
+  async function saveExplore(patch: Partial<NonNullable<typeof exploreState>>) {
+    if (!exploreState) return;
+    setExplBusy(true);
+    setExplSaved(false);
+    try {
+      const next = { ...exploreState, ...patch };
+      setExploreState(next);
+      const res = await fetch(`/api/bots/${id}/explore`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+      if (res.ok) {
+        setExplSaved(true);
+        setTimeout(() => setExplSaved(false), 1500);
+      }
+    } finally {
+      setExplBusy(false);
+    }
+  }
 
   async function applyPolish() {
     setPolishing(true);
@@ -139,6 +172,72 @@ export default function SharePage() {
             note="Mijozga ushbu link yuboring — Instagram bio yoki sayt linkasi sifatida"
           />
         </div>
+
+        {/* Marketplace toggle */}
+        {exploreState && (
+          <div className="panel p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold">🌍 Galeriya (marketplace)</h2>
+                <p className="text-xs text-muted leading-snug mt-0.5">
+                  Botingiz <a href="/explore" target="_blank" rel="noopener noreferrer" className="text-accent">/explore</a>{" "}
+                  sahifasida ko&apos;rinsin. Yangi mijozlar topish.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={exploreState.is_public}
+                  onChange={(e) => saveExplore({ is_public: e.target.checked })}
+                  disabled={explBusy}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-border rounded-full peer peer-checked:bg-accent transition" />
+                <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full transition peer-checked:translate-x-5" />
+              </label>
+            </div>
+            {exploreState.is_public && (
+              <>
+                <div>
+                  <label className="label">Qisqa tavsif (galeriyada ko&apos;rinadi)</label>
+                  <textarea
+                    className="input min-h-[60px] !text-xs"
+                    placeholder="Masalan: Premium kosmetika do'koni, Korea brendlari, Toshkent ichida bepul yetkazib berish"
+                    value={exploreState.description ?? ""}
+                    onChange={(e) =>
+                      setExploreState({ ...exploreState, description: e.target.value })
+                    }
+                    onBlur={() => saveExplore({ description: exploreState.description })}
+                    maxLength={200}
+                  />
+                </div>
+                <div>
+                  <label className="label">Kategoriya</label>
+                  <select
+                    className="input !text-xs"
+                    value={exploreState.explore_category ?? ""}
+                    onChange={(e) =>
+                      saveExplore({
+                        explore_category: e.target.value || null,
+                      })
+                    }
+                  >
+                    <option value="">— template'dan auto —</option>
+                    <option value="shop">🛒 Do&apos;kon</option>
+                    <option value="salon">💇 Salon</option>
+                    <option value="restaurant">🍽 Restoran</option>
+                    <option value="service">🔧 Xizmat</option>
+                    <option value="course">📚 Ta&apos;lim</option>
+                    <option value="clinic">🩺 Klinika</option>
+                    <option value="fitness">💪 Fitnes</option>
+                    <option value="other">📦 Boshqa</option>
+                  </select>
+                </div>
+              </>
+            )}
+            {explSaved && <div className="text-xs text-success">✓ Saqlandi</div>}
+          </div>
+        )}
 
         {/* Polish */}
         <div className="panel p-4">

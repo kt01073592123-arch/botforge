@@ -61,9 +61,22 @@ export async function GET(req: Request, ctx: { params: Promise<{ username: strin
 
   const pack = bot.template_id ? await getPack(bot.template_id) : null;
 
+  // White-label: bot egasining tarif 'max' bo'lsa "Powered by BotForge" yashirinadi.
+  let isWhiteLabel = false;
+  try {
+    const { data: sub } = await sb
+      .from("subscriptions")
+      .select("plan_id, active")
+      .eq("user_id", bot.owner_id)
+      .maybeSingle();
+    if (sub && (sub as { plan_id: string; active: boolean }).active) {
+      isWhiteLabel = (sub as { plan_id: string }).plan_id === "max";
+    }
+  } catch {}
+
   return NextResponse.json({
     business_name: bot.business_name ?? bot.name,
-    description: pack?.description ?? null,
+    description: (bot as { description?: string | null }).description ?? pack?.description ?? null,
     icon: pack?.icon ?? "🤖",
     bot_username: bot.tg_username,
     deep_link: `https://t.me/${bot.tg_username}`,
@@ -73,5 +86,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ username: strin
     faq: bd?.faq ?? [],
     working_hours: bd?.working_hours ?? {},
     contacts: bd?.contacts ?? {},
+    is_white_label: isWhiteLabel,
   });
 }

@@ -58,6 +58,9 @@ export default function Home() {
           <Link href="#how" className="btn-ghost !px-6 !py-3 !text-base">
             Qanday ishlaydi?
           </Link>
+          <Link href="/explore" className="btn-ghost !px-6 !py-3 !text-base">
+            🌍 Galereya
+          </Link>
         </div>
         <div className="text-xs text-muted">
           ✓ Karta kiritmasdan · ✓ Barcha tariflar bekor qilinadi · ✓ O‘zbek tilida
