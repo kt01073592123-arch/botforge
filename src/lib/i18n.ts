@@ -74,6 +74,98 @@ export const T: Dict = {
   upgrade_to: { uz: "tarifiga o‘tish", ru: "перейти на", en: "upgrade to" },
   free: { uz: "Bepul", ru: "Бесплатно", en: "Free" },
   per_month: { uz: "/ oy", ru: "/ мес", en: "/ mo" },
+
+  // Mini App — tabs
+  mini_tab_home: { uz: "Bosh", ru: "Главная", en: "Home" },
+  mini_tab_favorites: { uz: "Sevimli", ru: "Избранное", en: "Favorites" },
+  mini_tab_orders: { uz: "Buyurtma", ru: "Заказы", en: "Orders" },
+  mini_tab_refer: { uz: "Taklif", ru: "Друзьям", en: "Refer" },
+  mini_tab_profile: { uz: "Profil", ru: "Профиль", en: "Profile" },
+
+  // Mini App — search/catalog
+  mini_search: { uz: "Qidirish...", ru: "Поиск...", en: "Search..." },
+  mini_no_products: { uz: "Mahsulot topilmadi", ru: "Товары не найдены", en: "No products" },
+  mini_out_of_stock: { uz: "Yo'q", ru: "Нет", en: "Out" },
+  mini_book: { uz: "📅 Bron", ru: "📅 Записаться", en: "📅 Book" },
+  mini_add_to_cart: { uz: "+ Savatga", ru: "+ В корзину", en: "+ Add" },
+  mini_reviews_title: { uz: "Mijozlarimiz fikrlari", ru: "Отзывы клиентов", en: "Customer reviews" },
+  mini_default_customer: { uz: "Mijoz", ru: "Клиент", en: "Customer" },
+
+  // Mini App — cart/checkout
+  mini_cart: { uz: "🛒 Savat", ru: "🛒 Корзина", en: "🛒 Cart" },
+  mini_clear_cart: { uz: "Tozalash", ru: "Очистить", en: "Clear" },
+  mini_checkout_btn: { uz: "Buyurtma berish →", ru: "Оформить →", en: "Checkout →" },
+  mini_total: { uz: "Jami:", ru: "Итого:", en: "Total:" },
+  mini_order_title: { uz: "📦 Buyurtma", ru: "📦 Заказ", en: "📦 Order" },
+  mini_field_name: { uz: "Ism", ru: "Имя", en: "Name" },
+  mini_name_ph: { uz: "Ismingiz (ixtiyoriy)", ru: "Имя (необязательно)", en: "Name (optional)" },
+  mini_field_phone: { uz: "Telefon *", ru: "Телефон *", en: "Phone *" },
+  mini_field_note: { uz: "Izoh", ru: "Примечание", en: "Note" },
+  mini_note_ph: {
+    uz: "Yetkazib berish manzili...",
+    ru: "Адрес доставки...",
+    en: "Delivery address...",
+  },
+  mini_confirm: { uz: "✅ Tasdiqlash", ru: "✅ Подтвердить", en: "✅ Confirm" },
+  mini_submitting: { uz: "Yuborilmoqda...", ru: "Отправка...", en: "Submitting..." },
+  mini_order_received: { uz: "Buyurtma qabul qilindi!", ru: "Заказ принят!", en: "Order received!" },
+  mini_admin_will_contact: {
+    uz: "Tez orada admin bog'lanadi",
+    ru: "Скоро администратор свяжется",
+    en: "Admin will contact you",
+  },
+
+  // Mini App — promo
+  mini_promo_label: { uz: "🎟 Promo kod", ru: "🎟 Промокод", en: "🎟 Promo code" },
+  mini_promo_apply: { uz: "Qo'llash", ru: "Применить", en: "Apply" },
+  mini_promo_remove: { uz: "O'chirish", ru: "Убрать", en: "Remove" },
+
+  // Mini App — profile
+  mini_locked_title: {
+    uz: "Telegram orqali kiring",
+    ru: "Откройте через Telegram",
+    en: "Open via Telegram",
+  },
+  mini_locked_subtitle: {
+    uz: "Profil saqlash uchun bot orqali Mini App'ni oching",
+    ru: "Откройте Mini App через бота для сохранения профиля",
+    en: "Open Mini App via bot to save profile",
+  },
+  mini_stat_orders: { uz: "Buyurtmalar", ru: "Заказы", en: "Orders" },
+  mini_stat_spent: { uz: "Sarflandi", ru: "Потрачено", en: "Spent" },
+  mini_stat_bonus: { uz: "Bonus", ru: "Бонус", en: "Bonus" },
+  mini_save: { uz: "💾 Saqlash", ru: "💾 Сохранить", en: "💾 Save" },
+  mini_saving: { uz: "Saqlanmoqda...", ru: "Сохранение...", en: "Saving..." },
+  mini_saved_check: { uz: "✓ Saqlandi", ru: "✓ Сохранено", en: "✓ Saved" },
+
+  // Mini App — orders tab
+  mini_no_orders: { uz: "Buyurtmalar yo'q", ru: "Заказов нет", en: "No orders" },
+  mini_no_orders_sub: {
+    uz: "Birinchi buyurtmangiz shu yerda ko'rinadi",
+    ru: "Ваш первый заказ появится здесь",
+    en: "Your first order will appear here",
+  },
+  mini_order_status_pending: { uz: "Kutilmoqda", ru: "Ожидание", en: "Pending" },
+  mini_order_status_confirmed: { uz: "Qabul qilindi", ru: "Подтверждён", en: "Confirmed" },
+  mini_order_status_in_progress: { uz: "Yo'lda", ru: "В пути", en: "In transit" },
+  mini_order_status_completed: { uz: "Yetkazildi", ru: "Доставлен", en: "Delivered" },
+  mini_order_status_cancelled: { uz: "Bekor qilindi", ru: "Отменён", en: "Cancelled" },
+
+  // Mini App — refer
+  mini_refer_title: { uz: "Do'stni taklif qiling", ru: "Пригласите друга", en: "Invite a friend" },
+  mini_refer_subtitle: {
+    uz: "Do'stingiz birinchi xaridini qilganda 2% keshbek sizga qaytadi",
+    ru: "Когда друг сделает первую покупку, 2% кэшбек вернётся вам",
+    en: "When friend makes first purchase, 2% cashback comes back",
+  },
+  mini_refer_invited: { uz: "Taklif qilindi", ru: "Приглашено", en: "Invited" },
+  mini_refer_bonus: { uz: "Bonus to'plandi", ru: "Накоплено", en: "Earned" },
+  mini_refer_link_label: { uz: "Sizning havola", ru: "Ваша ссылка", en: "Your link" },
+  mini_refer_copy: { uz: "🔗 Havolani nusxa olish", ru: "🔗 Скопировать ссылку", en: "🔗 Copy link" },
+  mini_refer_copied: { uz: "✓ Nusxalandi", ru: "✓ Скопировано", en: "✓ Copied" },
+
+  // Mini App — common
+  mini_loading: { uz: "Yuklanmoqda...", ru: "Загрузка...", en: "Loading..." },
 };
 
 export function getLang(): Lang {

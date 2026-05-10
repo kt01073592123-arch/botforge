@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import BookingSheet from "@/components/BookingSheet";
+import { t, getLang, setLang, LANGS, type Lang } from "@/lib/i18n";
 
 // ==========================================================================
 // TYPES
@@ -116,6 +117,18 @@ export default function CustomerWebApp() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [refInfo, setRefInfo] = useState<ReferralInfo | null>(null);
+
+  // Language
+  const [lang, setLangState] = useState<Lang>("uz");
+  useEffect(() => {
+    setLangState(getLang());
+  }, []);
+  function changeLang(next: Lang) {
+    setLangState(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("bf_lang", next);
+    }
+  }
 
   // ---- Telegram WebApp init ----
   useEffect(() => {
@@ -328,6 +341,9 @@ export default function CustomerWebApp() {
               <span style={{ color: "#9B9BAB" }}>({reviewsBundle.count})</span>
             </button>
           )}
+
+          {/* Til almashtirish */}
+          <LangSwitcher lang={lang} onChange={changeLang} />
         </div>
 
         {/* Contact pills */}
@@ -560,7 +576,7 @@ function HomeTab(props: {
           <span className="text-base" style={{ color: "#9B9BAB" }}>🔍</span>
           <input
             type="text"
-            placeholder="Qidirish..."
+            placeholder={t("mini_search")}
             value={props.searchQuery}
             onChange={(e) => props.setSearchQuery(e.target.value)}
             className="flex-1 bg-transparent outline-none text-sm placeholder:text-gray-400"
@@ -1291,11 +1307,11 @@ function BottomNav({
   accent: string;
 }) {
   const items: { id: Tab; icon: string; label: string }[] = [
-    { id: "home", icon: "🏠", label: "Bosh" },
-    { id: "favorites", icon: "❤️", label: "Sevimli" },
-    { id: "orders", icon: "📦", label: "Buyurtma" },
-    { id: "refer", icon: "🎁", label: "Taklif" },
-    { id: "profile", icon: "👤", label: "Profil" },
+    { id: "home", icon: "🏠", label: t("mini_tab_home") },
+    { id: "favorites", icon: "❤️", label: t("mini_tab_favorites") },
+    { id: "orders", icon: "📦", label: t("mini_tab_orders") },
+    { id: "refer", icon: "🎁", label: t("mini_tab_refer") },
+    { id: "profile", icon: "👤", label: t("mini_tab_profile") },
   ];
   const cartCount = cart.reduce((s, c) => s + c.qty, 0);
   return (
@@ -1844,11 +1860,64 @@ function EmptyState({
   );
 }
 
+function LangSwitcher({
+  lang,
+  onChange,
+}: {
+  lang: Lang;
+  onChange: (l: Lang) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = LANGS.find((l) => l.code === lang) ?? LANGS[0];
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 px-2 py-1.5 rounded-xl text-sm bg-white shadow-sm"
+        style={{ border: "1px solid rgba(0,0,0,0.06)", color: "#1A1B2E" }}
+        aria-label="Language"
+      >
+        <span>{current.flag}</span>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-lg overflow-hidden min-w-[140px]"
+            style={{ border: "1px solid rgba(0,0,0,0.08)" }}
+          >
+            {LANGS.map((l) => (
+              <button
+                key={l.code}
+                type="button"
+                onClick={() => {
+                  onChange(l.code);
+                  setOpen(false);
+                }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-[#FAFAFC]"
+                style={{
+                  color: l.code === lang ? "#EC4899" : "#1A1B2E",
+                  fontWeight: l.code === lang ? 700 : 400,
+                }}
+              >
+                <span>{l.flag}</span>
+                <span>{l.label}</span>
+                {l.code === lang && <span className="ml-auto text-xs">✓</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function SkeletonShell() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: "#FFFBFD", color: "#9B9BAB" }}>
       <div className="w-16 h-16 rounded-3xl animate-pulse mb-3" style={{ background: "rgba(0,0,0,0.05)" }} />
-      <div className="text-xs">Yuklanmoqda...</div>
+      <div className="text-xs">{t("mini_loading")}</div>
     </div>
   );
 }
