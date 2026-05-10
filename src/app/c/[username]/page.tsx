@@ -616,7 +616,7 @@ function HomeTab(props: {
         <div className="mt-5">
           <div className="px-4 mb-2 flex items-center justify-between">
             <h3 className="text-sm font-bold tracking-tight" style={{ color: "#1A1B2E" }}>
-              Mijozlarimiz fikrlari{" "}
+              {t("mini_reviews_title")}{" "}
               <span style={{ color: props.primary }}>⭐</span>
             </h3>
             <span className="text-[11px]" style={{ color: "#6B6B7B" }}>
@@ -638,7 +638,7 @@ function HomeTab(props: {
         {props.services.length === 0 ? (
           <EmptyState
             emoji="🛍"
-            title="Mahsulot topilmadi"
+            title={t("mini_no_products")}
             subtitle={
               props.searchQuery
                 ? `"${props.searchQuery}" bo'yicha mos kelgani yo'q`
@@ -803,7 +803,7 @@ function ProductCard({
         {/* Stock badge */}
         {out && (
           <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/80 text-white">
-            Yo&apos;q
+            {t("mini_out_of_stock")}
           </div>
         )}
       </div>
@@ -839,7 +839,7 @@ function ProductCard({
                 className="flex-1 py-2 rounded-xl text-[11px] font-bold transition active:scale-95"
                 style={{ background: gradient, color: "#fff" }}
               >
-                📅 Bron
+                {t("mini_book")}
               </button>
             ) : inCartQty > 0 ? (
               <div
@@ -860,7 +860,7 @@ function ProductCard({
                 className="flex-1 py-2 rounded-xl text-[11px] font-bold transition active:scale-95"
                 style={{ background: gradient, color: "#fff" }}
               >
-                + Savatga
+                {t("mini_add_to_cart")}
               </button>
             )}
           </div>
@@ -945,7 +945,7 @@ function OrdersTab({
       <div className="px-4 pt-8">
         <EmptyState
           emoji="🔒"
-          title="Telegram orqali kiring"
+          title={t("mini_locked_title")}
           subtitle="Buyurtmalaringizni ko'rish uchun bot orqali Mini App'ni oching"
         />
       </div>
@@ -956,8 +956,8 @@ function OrdersTab({
       <div className="px-4 pt-8">
         <EmptyState
           emoji="📦"
-          title="Buyurtmalar yo'q"
-          subtitle="Birinchi buyurtmangiz shu yerda ko'rinadi"
+          title={t("mini_no_orders")}
+          subtitle={t("mini_no_orders_sub")}
         />
       </div>
     );
@@ -981,11 +981,11 @@ function OrderCard({
   primary: string;
 }) {
   const STATUS: Record<string, { label: string; color: string; emoji: string }> = {
-    pending: { label: "Kutilmoqda", color: "#FCD34D", emoji: "⏳" },
-    confirmed: { label: "Qabul qilindi", color: "#34D399", emoji: "✅" },
-    in_progress: { label: "Yo'lda", color: "#60A5FA", emoji: "🚚" },
-    completed: { label: "Yetkazildi", color: accent, emoji: "📦" },
-    cancelled: { label: "Bekor qilindi", color: "#F87171", emoji: "❌" },
+    pending: { label: t("mini_order_status_pending"), color: "#FCD34D", emoji: "⏳" },
+    confirmed: { label: t("mini_order_status_confirmed"), color: "#34D399", emoji: "✅" },
+    in_progress: { label: t("mini_order_status_in_progress"), color: "#60A5FA", emoji: "🚚" },
+    completed: { label: t("mini_order_status_completed"), color: accent, emoji: "📦" },
+    cancelled: { label: t("mini_order_status_cancelled"), color: "#F87171", emoji: "❌" },
   };
   const st = STATUS[order.status] ?? STATUS.pending;
   const displayId = `ORD-${order.id.slice(-6).toUpperCase()}`;
@@ -1075,8 +1075,8 @@ function ProfileTab({
       <div className="px-4 pt-8">
         <EmptyState
           emoji="🔒"
-          title="Telegram orqali kiring"
-          subtitle="Profil saqlash uchun bot orqali Mini App'ni oching"
+          title={t("mini_locked_title")}
+          subtitle={t("mini_locked_subtitle")}
         />
       </div>
     );
@@ -1115,9 +1115,9 @@ function ProfileTab({
     <div className="px-4 mt-4 space-y-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2">
-        <StatCard label="Buyurtmalar" value={String(profile?.total_orders ?? 0)} primary={primary} />
-        <StatCard label="Sarflandi" value={`${((profile?.total_spent_uzs ?? 0) / 1000).toFixed(0)}k`} primary={primary} />
-        <StatCard label="Bonus" value={String(profile?.loyalty_points ?? 0)} primary={primary} />
+        <StatCard label={t("mini_stat_orders")} value={String(profile?.total_orders ?? 0)} primary={primary} />
+        <StatCard label={t("mini_stat_spent")} value={`${((profile?.total_spent_uzs ?? 0) / 1000).toFixed(0)}k`} primary={primary} />
+        <StatCard label={t("mini_stat_bonus")} value={String(profile?.loyalty_points ?? 0)} primary={primary} />
       </div>
 
       {/* Form */}
@@ -1126,14 +1126,14 @@ function ProfileTab({
         style={{ border: "1px solid rgba(0,0,0,0.06)" }}
       >
         <Field
-          label="Ism"
+          label={t("mini_field_name")}
           value={name}
           onChange={setName}
-          placeholder="Ismingiz"
+          placeholder={t("mini_field_name")}
           icon="👤"
         />
         <Field
-          label="Telefon"
+          label={t("mini_field_phone")}
           value={phone}
           onChange={setPhone}
           placeholder="+998 90 ..."
@@ -1146,9 +1146,164 @@ function ProfileTab({
           className="w-full py-3 rounded-xl font-bold text-sm transition active:scale-95 disabled:opacity-50 shadow-md"
           style={{ background: gradient, color: "#fff", boxShadow: `0 8px 20px ${primary}55` }}
         >
-          {saving ? "Saqlanmoqda..." : saved ? "✓ Saqlandi" : "💾 Saqlash"}
+          {saving ? t("mini_saving") : saved ? t("mini_saved_check") : t("mini_save")}
         </button>
       </div>
+
+      {/* Push notifications toggle */}
+      <PushToggle username={username} tgUserId={tgUserId} tgInitData={tgInitData} primary={primary} accent={accent} />
+    </div>
+  );
+}
+
+function PushToggle({
+  username,
+  tgUserId,
+  tgInitData,
+  primary,
+  accent,
+}: {
+  username: string;
+  tgUserId: number | null;
+  tgInitData: string;
+  primary: string;
+  accent: string;
+}) {
+  const [enabled, setEnabled] = useState(false);
+  const [supported, setSupported] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [vapidKey, setVapidKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ok =
+      "serviceWorker" in navigator &&
+      "PushManager" in window &&
+      "Notification" in window;
+    setSupported(ok);
+    if (!ok) return;
+    fetch(`/api/public/${username}/push-subscribe`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.enabled) setVapidKey(d.vapid_public_key);
+      })
+      .catch(() => {});
+    navigator.serviceWorker?.ready.then(async (reg) => {
+      const sub = await reg.pushManager.getSubscription();
+      setEnabled(!!sub);
+    });
+  }, [username]);
+
+  function urlBase64ToUint8Array(base64: string): Uint8Array {
+    const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+    const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(b64);
+    const arr = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+    return arr;
+  }
+
+  async function enable() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      if (!vapidKey) {
+        setMsg(t("mini_push_denied"));
+        return;
+      }
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") {
+        setMsg(t("mini_push_denied"));
+        return;
+      }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey).buffer as ArrayBuffer,
+      });
+      const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+      await fetch(`/api/public/${username}/push-subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endpoint: json.endpoint,
+          p256dh: json.keys?.p256dh,
+          auth: json.keys?.auth,
+          tg_id: tgUserId ?? undefined,
+          init_data: tgInitData,
+          user_agent: navigator.userAgent.slice(0, 200),
+        }),
+      });
+      setEnabled(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disable() {
+    setBusy(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        const endpoint = sub.endpoint;
+        await sub.unsubscribe();
+        await fetch(
+          `/api/public/${username}/push-subscribe?endpoint=${encodeURIComponent(endpoint)}`,
+          { method: "DELETE" },
+        );
+      }
+      setEnabled(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!supported || !vapidKey) return null;
+
+  const gradient = `linear-gradient(135deg, ${primary}, ${accent})`;
+  return (
+    <div
+      className="rounded-2xl p-4 bg-white shadow-sm"
+      style={{ border: "1px solid rgba(0,0,0,0.06)" }}
+    >
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <div className="text-sm font-semibold" style={{ color: "#1A1B2E" }}>
+          {t("mini_push_enable")}
+        </div>
+      </div>
+      <div className="text-[11px] mb-3" style={{ color: "#6B6B7B" }}>
+        {enabled
+          ? t("mini_push_enabled")
+          : "Buyurtma statusi yangilanganda darhol bilasiz"}
+      </div>
+      {enabled ? (
+        <button
+          type="button"
+          onClick={disable}
+          disabled={busy}
+          className="w-full py-2 rounded-xl text-xs font-bold disabled:opacity-50"
+          style={{ background: "#FAFAFC", color: "#6B6B7B", border: "1px solid rgba(0,0,0,0.08)" }}
+        >
+          {t("mini_push_disable_btn")}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={enable}
+          disabled={busy}
+          className="w-full py-2.5 rounded-xl text-xs font-bold text-white disabled:opacity-50"
+          style={{ background: gradient, boxShadow: `0 6px 16px ${primary}40` }}
+        >
+          {busy ? "..." : t("mini_push_enable_btn")}
+        </button>
+      )}
+      {msg && (
+        <div className="text-xs mt-2" style={{ color: "#EF4444" }}>
+          {msg}
+        </div>
+      )}
     </div>
   );
 }
@@ -1224,7 +1379,7 @@ function ReferTab({
       <div className="px-4 pt-8">
         <EmptyState
           emoji="🔒"
-          title="Telegram orqali kiring"
+          title={t("mini_locked_title")}
           subtitle="Do'stni taklif qilish uchun bot orqali Mini App'ni oching"
         />
       </div>
@@ -1245,22 +1400,21 @@ function ReferTab({
         style={{ background: gradient, color: "#fff" }}
       >
         <div className="text-5xl mb-2">🎁</div>
-        <div className="font-extrabold text-lg mb-1">Do&apos;stni taklif qiling</div>
+        <div className="font-extrabold text-lg mb-1">{t("mini_refer_title")}</div>
         <div className="text-xs opacity-90 max-w-[260px] mx-auto leading-relaxed">
-          Do&apos;stingiz birinchi xaridini qilganda{" "}
-          <span className="font-bold">2% keshbek</span> sizga qaytadi
+          {t("mini_refer_subtitle")}
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-2">
         <StatCard
-          label="Taklif qilindi"
+          label={t("mini_refer_invited")}
           value={`${info.referrals_completed}/${info.referrals_count}`}
           primary={primary}
         />
         <StatCard
-          label="Bonus to'plandi"
+          label={t("mini_refer_bonus")}
           value={`${(info.bonus_balance_uzs / 1000).toFixed(0)}k`}
           primary={primary}
         />
@@ -1271,7 +1425,7 @@ function ReferTab({
         className="rounded-2xl p-4 space-y-2.5 bg-white shadow-sm"
         style={{ border: "1px solid rgba(0,0,0,0.06)" }}
       >
-        <div className="text-[11px] font-medium" style={{ color: "#6B6B7B" }}>Sizning havola</div>
+        <div className="text-[11px] font-medium" style={{ color: "#6B6B7B" }}>{t("mini_refer_link_label")}</div>
         <div
           className="text-xs font-mono truncate p-2 rounded-lg"
           style={{ background: "#FAFAFC", border: "1px solid rgba(0,0,0,0.08)", color: "#1A1B2E" }}
@@ -1283,7 +1437,7 @@ function ReferTab({
           className="w-full py-2.5 rounded-xl font-bold text-sm transition active:scale-95 shadow-md"
           style={{ background: gradient, color: "#fff", boxShadow: `0 8px 20px ${primary}55` }}
         >
-          {copied ? "✓ Nusxalandi" : "🔗 Havolani nusxa olish"}
+          {copied ? t("mini_refer_copied") : t("mini_refer_copy")}
         </button>
       </div>
     </div>
@@ -1376,11 +1530,11 @@ function Drawer({
   onClose: () => void;
 }) {
   const items: { id: Tab; icon: string; label: string }[] = [
-    { id: "home", icon: "🏠", label: "Bosh sahifa" },
-    { id: "favorites", icon: "❤️", label: "Sevimlilar" },
-    { id: "orders", icon: "📦", label: "Buyurtmalarim" },
-    { id: "refer", icon: "🎁", label: "Do'stni taklif" },
-    { id: "profile", icon: "👤", label: "Profil" },
+    { id: "home", icon: "🏠", label: t("mini_tab_home") },
+    { id: "favorites", icon: "❤️", label: t("mini_tab_favorites") },
+    { id: "orders", icon: "📦", label: t("mini_tab_orders") },
+    { id: "refer", icon: "🎁", label: t("mini_tab_refer") },
+    { id: "profile", icon: "👤", label: t("mini_tab_profile") },
   ];
   return (
     <div className="fixed inset-0 z-40">
@@ -1607,15 +1761,15 @@ function CartModal({
         {done ? (
           <div className="p-8 text-center">
             <div className="text-6xl mb-3">✅</div>
-            <div className="font-bold text-lg">Buyurtma qabul qilindi!</div>
-            <div className="text-xs mt-1" style={{ color: "#6B6B7B" }}>Tez orada admin bog&apos;lanadi</div>
+            <div className="font-bold text-lg">{t("mini_order_received")}</div>
+            <div className="text-xs mt-1" style={{ color: "#6B6B7B" }}>{t("mini_admin_will_contact")}</div>
           </div>
         ) : step === "cart" ? (
           <>
             <div className="px-4 py-2 flex items-center justify-between">
-              <h2 className="font-extrabold text-lg">🛒 Savat</h2>
+              <h2 className="font-extrabold text-lg">{t("mini_cart")}</h2>
               <button onClick={onClear} className="text-[11px]" style={{ color: "#6B6B7B" }}>
-                Tozalash
+                {t("mini_clear_cart")}
               </button>
             </div>
             <div className="px-4 space-y-2">
@@ -1659,7 +1813,7 @@ function CartModal({
             </div>
             <div className="p-4 sticky bottom-0 bg-white space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs" style={{ color: "#6B6B7B" }}>Jami:</span>
+                <span className="text-xs" style={{ color: "#6B6B7B" }}>{t("mini_total")}</span>
                 <span
                   className="text-xl font-extrabold"
                   style={{
@@ -1677,7 +1831,7 @@ function CartModal({
                 className="w-full py-3 rounded-2xl font-bold text-sm transition active:scale-95"
                 style={{ background: gradient, color: "#fff", boxShadow: `0 8px 24px ${primary}55` }}
               >
-                Buyurtma berish →
+                {t("mini_checkout_btn")}
               </button>
             </div>
           </>
@@ -1685,18 +1839,18 @@ function CartModal({
           <>
             <div className="px-4 py-2 flex items-center gap-3">
               <button onClick={() => setStep("cart")}>←</button>
-              <h2 className="font-extrabold text-lg">📦 Buyurtma</h2>
+              <h2 className="font-extrabold text-lg">{t("mini_order_title")}</h2>
             </div>
             <div className="px-4 space-y-2.5 pb-4">
               <Field
-                label="Ism"
+                label={t("mini_field_name")}
                 value={name}
                 onChange={setName}
-                placeholder="Ismingiz (ixtiyoriy)"
+                placeholder={t("mini_name_ph")}
                 icon="👤"
               />
               <Field
-                label="Telefon *"
+                label={t("mini_field_phone")}
                 value={phone}
                 onChange={setPhone}
                 placeholder="+998 90 ..."
@@ -1704,11 +1858,11 @@ function CartModal({
                 type="tel"
               />
               <div>
-                <div className="text-[11px] mb-1 ml-1 font-medium" style={{ color: "#6B6B7B" }}>Izoh</div>
+                <div className="text-[11px] mb-1 ml-1 font-medium" style={{ color: "#6B6B7B" }}>{t("mini_field_note")}</div>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Yetkazib berish manzili, qo'shimcha ma'lumot..."
+                  placeholder={t("mini_note_ph")}
                   rows={3}
                   className="w-full px-3 py-2.5 rounded-xl text-sm resize-none outline-none placeholder:text-gray-400"
                   style={{ background: "#FAFAFC", border: "1px solid rgba(0,0,0,0.08)", color: "#1A1B2E" }}
@@ -1742,7 +1896,7 @@ function CartModal({
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-xs font-bold">Jami:</span>
+                    <span className="text-xs font-bold">{t("mini_total")}</span>
                     <span
                       className="font-extrabold"
                       style={{
@@ -1764,7 +1918,7 @@ function CartModal({
                 style={{ background: "#FAFAFC", border: "1px solid rgba(0,0,0,0.08)" }}
               >
                 <div className="text-[11px] font-medium" style={{ color: "#6B6B7B" }}>
-                  🎟 Promo kod (ixtiyoriy)
+                  {t("mini_promo_label")}
                 </div>
                 {promoApplied ? (
                   <div className="flex items-center justify-between gap-2">
@@ -1782,7 +1936,7 @@ function CartModal({
                       className="text-xs"
                       style={{ color: "#9B9BAB" }}
                     >
-                      O&apos;chirish
+                      {t("mini_promo_remove")}
                     </button>
                   </div>
                 ) : (
@@ -1808,7 +1962,7 @@ function CartModal({
                       className="px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-50"
                       style={{ background: gradient, color: "#fff" }}
                     >
-                      {promoBusy ? "..." : "Qo'llash"}
+                      {promoBusy ? "..." : t("mini_promo_apply")}
                     </button>
                   </div>
                 )}
@@ -1825,7 +1979,7 @@ function CartModal({
                 className="w-full py-3 rounded-2xl font-bold text-sm transition active:scale-95 disabled:opacity-50"
                 style={{ background: gradient, color: "#fff", boxShadow: `0 8px 20px ${primary}55` }}
               >
-                {submitting ? "Yuborilmoqda..." : `✅ Tasdiqlash (${finalTotal.toLocaleString("uz-UZ")} so'm)`}
+                {submitting ? t("mini_submitting") : `${t("mini_confirm")} (${finalTotal.toLocaleString("uz-UZ")} so'm)`}
               </button>
             </div>
           </>

@@ -166,6 +166,25 @@ export const T: Dict = {
 
   // Mini App — common
   mini_loading: { uz: "Yuklanmoqda...", ru: "Загрузка...", en: "Loading..." },
+
+  // Mini App — push notifications
+  mini_push_enable: {
+    uz: "🔔 Buyurtma haqida xabarlar",
+    ru: "🔔 Уведомления о заказе",
+    en: "🔔 Order notifications",
+  },
+  mini_push_enable_btn: { uz: "Yoqish", ru: "Включить", en: "Enable" },
+  mini_push_enabled: {
+    uz: "✓ Push yoqilgan",
+    ru: "✓ Push включён",
+    en: "✓ Push enabled",
+  },
+  mini_push_disable_btn: { uz: "O'chirish", ru: "Отключить", en: "Disable" },
+  mini_push_denied: {
+    uz: "Brauzer ruxsat bermadi. Sozlamalardan yoqing.",
+    ru: "Браузер не дал разрешение. Включите в настройках.",
+    en: "Browser denied. Enable in settings.",
+  },
 };
 
 export function getLang(): Lang {

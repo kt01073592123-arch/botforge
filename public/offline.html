@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Offline · BotForge</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #FFFBFD 0%, #FFE4EC 100%);
+      color: #1A1B2E;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      padding: 20px;
+      text-align: center;
+    }
+    .emoji { font-size: 80px; margin-bottom: 24px; opacity: 0.8; }
+    h1 { font-size: 24px; font-weight: 800; margin: 0 0 8px; }
+    p { font-size: 14px; color: #6B6B7B; max-width: 320px; margin: 0 0 24px; line-height: 1.5; }
+    button {
+      padding: 12px 28px;
+      border-radius: 999px;
+      border: none;
+      font-weight: 700;
+      font-size: 14px;
+      color: #fff;
+      background: linear-gradient(135deg, #EC4899, #8B5CF6);
+      box-shadow: 0 8px 20px rgba(236, 72, 153, 0.35);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="emoji">📡</div>
+  <h1>Internet aloqasi yo'q</h1>
+  <p>
+    Mini App offline rejimida. Internet qaytsa avtomatik tiklanadi yoki tugmani bosing.
+  </p>
+  <button onclick="location.reload()">Qayta urinib ko'rish</button>
+  <script>
+    window.addEventListener("online", () => location.reload());
+  </script>
+</body>
+</html>

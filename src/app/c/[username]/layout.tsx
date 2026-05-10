@@ -37,6 +37,16 @@ export default function CustomerWebAppLayout({
         src="https://telegram.org/js/telegram-web-app.js"
         strategy="beforeInteractive"
       />
+      <Script id="sw-register" strategy="afterInteractive">
+        {`
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+              navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .catch(function (e) { console.warn('SW register failed', e); });
+            });
+          }
+        `}
+      </Script>
       {children}
     </>
   );

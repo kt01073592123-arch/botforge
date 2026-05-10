@@ -394,6 +394,25 @@ async function handleOrderCallback(
         `Sizning buyurtmangiz (${displayId}) holati o'zgardi:\n\n<b>${statusUz[t.to]}</b>`,
       )
       .catch(() => {});
+
+    // Web Push xabarnoma — agar mijoz Mini App'da subscribe bo'lgan bo'lsa
+    try {
+      const { sendPushToCustomer } = await import("./push");
+      await sendPushToCustomer({
+        botId: bot.id,
+        customerTgId: orderRow.customer_tg_id,
+        payload: {
+          title: bot.business_name ?? bot.name ?? "Buyurtma",
+          body: `${displayId} — ${statusUz[t.to]}`,
+          url: bot.tg_username ? `/c/${bot.tg_username}?tab=orders` : "/",
+          tag: `order-${orderId}`,
+          bot_username: bot.tg_username ?? undefined,
+          data: { order_id: orderId, status: t.to },
+        },
+      });
+    } catch (e) {
+      console.error("[push]", (e as Error).message);
+    }
   }
 
   // Yetkazilganda: review so'rash + cashback (referral bonus)
