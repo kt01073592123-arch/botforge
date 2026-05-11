@@ -1,15 +1,17 @@
 // /admin/bots — barcha botlar ro'yxati. Owner, AI cost, status, message limit.
 
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { listBots } from "@/lib/admin_api";
+import { t, type Lang } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 const STATUS_BADGE: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700",
+  draft:  "bg-gray-100 text-gray-700",
   active: "bg-emerald-100 text-emerald-700",
   paused: "bg-yellow-100 text-yellow-700",
-  error: "bg-red-100 text-red-700",
+  error:  "bg-red-100 text-red-700",
 };
 
 export default async function BotsPage({
@@ -17,6 +19,7 @@ export default async function BotsPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
+  const lang = ((await cookies()).get("bf_lang")?.value ?? "uz") as Lang;
   const sp = await searchParams;
   const bots = await listBots({ search: sp.q, status: sp.status, limit: 200 });
 
@@ -24,8 +27,8 @@ export default async function BotsPage({
     <div className="space-y-6">
       <div className="flex justify-between items-center flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-bold">🤖 Barcha botlar</h1>
-          <p className="text-sm text-gray-500 mt-1">{bots.length} ta natija</p>
+          <h1 className="text-2xl font-bold">🤖 {t("adm_bots_title", lang)}</h1>
+          <p className="text-sm text-gray-500 mt-1">{bots.length} {t("adm_results", lang)}</p>
         </div>
         <form className="flex gap-2">
           <input
@@ -36,13 +39,13 @@ export default async function BotsPage({
             className="border rounded px-3 py-2 text-sm w-48"
           />
           <select name="status" defaultValue={sp.status ?? ""} className="border rounded px-3 py-2 text-sm">
-            <option value="">Barcha status</option>
-            <option value="active">Active</option>
-            <option value="paused">Paused</option>
-            <option value="draft">Draft</option>
-            <option value="error">Error</option>
+            <option value="">{t("adm_all_status", lang)}</option>
+            <option value="active">{t("status_active", lang)}</option>
+            <option value="paused">{t("status_paused", lang)}</option>
+            <option value="draft">{t("status_draft", lang)}</option>
+            <option value="error">{t("status_error", lang)}</option>
           </select>
-          <button className="px-3 py-2 bg-gray-900 text-white rounded text-sm">Filtr</button>
+          <button className="px-3 py-2 bg-gray-900 text-white rounded text-sm">{t("adm_filter", lang)}</button>
         </form>
       </div>
 
@@ -50,13 +53,13 @@ export default async function BotsPage({
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b text-xs uppercase text-gray-600">
             <tr>
-              <th className="px-3 py-2 text-left">Bot</th>
-              <th className="px-3 py-2 text-left">Owner</th>
+              <th className="px-3 py-2 text-left">{t("adm_col_bot", lang)}</th>
+              <th className="px-3 py-2 text-left">{t("adm_col_owner", lang)}</th>
               <th className="px-3 py-2 text-left">Status</th>
-              <th className="px-3 py-2 text-right">Xabarlar</th>
-              <th className="px-3 py-2 text-right">Cost (30d)</th>
+              <th className="px-3 py-2 text-right">{t("adm_card_messages", lang)}</th>
+              <th className="px-3 py-2 text-right">{t("adm_col_cost", lang)}</th>
               <th className="px-3 py-2 text-left">Model</th>
-              <th className="px-3 py-2 text-left">Yaratilgan</th>
+              <th className="px-3 py-2 text-left">{t("adm_col_created", lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -86,11 +89,7 @@ export default async function BotsPage({
                     )}
                   </td>
                   <td className="px-3 py-2">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded font-semibold ${
-                        STATUS_BADGE[b.status] ?? STATUS_BADGE.draft
-                      }`}
-                    >
+                    <span className={`text-xs px-2 py-0.5 rounded font-semibold ${STATUS_BADGE[b.status] ?? STATUS_BADGE.draft}`}>
                       {b.status}
                     </span>
                   </td>
@@ -120,7 +119,7 @@ export default async function BotsPage({
             {bots.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-3 py-12 text-center text-gray-400">
-                  Botlar topilmadi
+                  {t("adm_bots_not_found", lang)}
                 </td>
               </tr>
             )}

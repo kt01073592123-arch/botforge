@@ -4,6 +4,7 @@
 // xabar yuboradi. Telegram orqali platforma boti yetkazadi.
 
 import { useEffect, useState } from "react";
+import { useT } from "@/hooks/useT";
 
 type Announcement = {
   id: string;
@@ -19,6 +20,7 @@ type Announcement = {
 };
 
 export default function BroadcastPage() {
+  const { t } = useT();
   const [list, setList] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
@@ -35,7 +37,8 @@ export default function BroadcastPage() {
 
   async function send() {
     if (!title.trim() || !body.trim() || sending) return;
-    if (!confirm(`${audience === "all" ? "BARCHA" : audience.toUpperCase()} foydalanuvchilarga yuborilsinmi?`)) return;
+    const audienceLabel = audience === "all" ? t("adm_audience_all").toUpperCase() : audience.toUpperCase();
+    if (!confirm(`${audienceLabel} ${t("adm_broadcast_confirm")}`)) return;
     setSending(true);
     try {
       const res = await fetch("/api/admin/broadcast", {
@@ -45,7 +48,7 @@ export default function BroadcastPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.message ?? "Xato");
+        alert(data.message ?? t("status_error"));
         return;
       }
       setTitle("");
@@ -63,26 +66,24 @@ export default function BroadcastPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">📢 Broadcast</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Hamma sellerlarga platforma boti orqali xabar yuboring
-        </p>
+        <h1 className="text-2xl font-bold">📢 {t("adm_nav_broadcast")}</h1>
+        <p className="text-sm text-gray-500 mt-1">{t("adm_broadcast_sub")}</p>
       </div>
 
       <div className="border rounded-lg p-5 bg-white space-y-3">
         <div>
-          <label className="text-xs font-semibold text-gray-600 mb-1 block">Sarlavha</label>
+          <label className="text-xs font-semibold text-gray-600 mb-1 block">{t("adm_broadcast_title_lbl")}</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Yangilik haqida..."
+            placeholder={t("adm_broadcast_title_lbl") + "..."}
             className="w-full border rounded px-3 py-2"
             maxLength={120}
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-gray-600 mb-1 block">Matn</label>
+          <label className="text-xs font-semibold text-gray-600 mb-1 block">{t("adm_broadcast_body_lbl")}</label>
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
@@ -95,17 +96,17 @@ export default function BroadcastPage() {
         </div>
         <div className="flex items-end gap-3 flex-wrap">
           <div>
-            <label className="text-xs font-semibold text-gray-600 mb-1 block">Audience</label>
+            <label className="text-xs font-semibold text-gray-600 mb-1 block">{t("adm_audience_lbl")}</label>
             <select
               value={audience}
               onChange={(e) => setAudience(e.target.value as typeof audience)}
               className="border rounded px-3 py-2"
             >
-              <option value="all">Hammaga</option>
-              <option value="free">Faqat Free</option>
-              <option value="paid">Faqat pullik</option>
-              <option value="pro">Faqat Pro</option>
-              <option value="max">Faqat Max</option>
+              <option value="all">{t("adm_audience_all")}</option>
+              <option value="free">{t("adm_audience_free")}</option>
+              <option value="paid">{t("adm_audience_paid")}</option>
+              <option value="pro">{t("adm_audience_pro")}</option>
+              <option value="max">{t("adm_audience_max")}</option>
             </select>
           </div>
           <button
@@ -113,18 +114,17 @@ export default function BroadcastPage() {
             disabled={sending || !title.trim() || !body.trim()}
             className="px-5 py-2 bg-purple-600 text-white rounded font-semibold disabled:opacity-50 hover:bg-purple-700"
           >
-            {sending ? "Yuborilmoqda..." : "📤 Yuborish"}
+            {sending ? t("adm_broadcast_sending") : t("adm_broadcast_send")}
           </button>
         </div>
       </div>
 
-      {/* History */}
       <div className="border rounded-lg overflow-hidden bg-white">
-        <div className="px-4 py-3 border-b font-bold">Tarix</div>
+        <div className="px-4 py-3 border-b font-bold">{t("adm_broadcast_history")}</div>
         {loading ? (
-          <div className="p-8 text-center text-gray-400">Yuklanmoqda...</div>
+          <div className="p-8 text-center text-gray-400">{t("loading")}</div>
         ) : list.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">Hali yuborilmagan</div>
+          <div className="p-8 text-center text-gray-400">{t("adm_broadcast_empty")}</div>
         ) : (
           <div className="divide-y">
             {list.map((a) => (
@@ -148,13 +148,11 @@ export default function BroadcastPage() {
                     {a.status}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap line-clamp-3">
-                  {a.body}
-                </p>
+                <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap line-clamp-3">{a.body}</p>
                 <div className="mt-2 flex gap-4 text-xs text-gray-500">
-                  <span>📨 {a.total_sent}/{a.total_recipients} yuborildi</span>
+                  <span>📨 {a.total_sent}/{a.total_recipients}</span>
                   {a.total_failed > 0 && (
-                    <span className="text-red-500">❌ {a.total_failed} xato</span>
+                    <span className="text-red-500">❌ {a.total_failed}</span>
                   )}
                 </div>
               </div>

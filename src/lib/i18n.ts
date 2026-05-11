@@ -185,6 +185,100 @@ export const T: Dict = {
     ru: "Браузер не дал разрешение. Включите в настройках.",
     en: "Browser denied. Enable in settings.",
   },
+
+  // Admin — navigation
+  adm_nav_overview:  { uz: "Umumiy",           ru: "Обзор",          en: "Overview"    },
+  adm_nav_sellers:   { uz: "Foydalanuvchilar", ru: "Пользователи",   en: "Users"       },
+  adm_nav_bots:      { uz: "Botlar",           ru: "Боты",           en: "Bots"        },
+  adm_nav_revenue:   { uz: "Daromad",          ru: "Доход",          en: "Revenue"     },
+  adm_nav_ai_costs:  { uz: "AI xarajat",       ru: "AI расходы",     en: "AI costs"    },
+  adm_nav_system:    { uz: "Tizim",            ru: "Система",        en: "System"      },
+  adm_nav_audit:     { uz: "Audit",            ru: "Аудит",          en: "Audit"       },
+  adm_nav_broadcast: { uz: "Broadcast",        ru: "Рассылка",       en: "Broadcast"   },
+
+  // Admin — overview
+  adm_overview_title:  { uz: "Umumiy ko'rinish",          ru: "Обзор",                    en: "Overview"           },
+  adm_30d_stats:       { uz: "Oxirgi 30 kun statistikasi", ru: "Статистика за 30 дней",   en: "Last 30 days stats" },
+  adm_card_paid_subs:  { uz: "Pullik obunalar",           ru: "Платные подписки",          en: "Paid subscriptions" },
+  adm_card_new_users:  { uz: "Yangi userlar",             ru: "Новые пользователи",        en: "New users"          },
+  adm_card_users:      { uz: "Foydalanuvchilar",          ru: "Пользователи",              en: "Users"              },
+  adm_card_bots:       { uz: "Botlar",                    ru: "Боты",                      en: "Bots"               },
+  adm_card_messages:   { uz: "Xabarlar",                  ru: "Сообщения",                 en: "Messages"           },
+  adm_card_leads:      { uz: "Lead'lar",                  ru: "Лиды",                      en: "Leads"              },
+  adm_card_ai_cost:    { uz: "AI cost (30 kun)",          ru: "AI расходы (30 дн.)",       en: "AI cost (30d)"      },
+  adm_card_webhooks:   { uz: "Webhook xatolar",           ru: "Ошибки вебхука",            en: "Webhook errors"     },
+  adm_card_margin:     { uz: "Margin",                    ru: "Маржа",                     en: "Margin"             },
+  adm_quick_actions:   { uz: "Tezkor amallar",            ru: "Быстрые действия",          en: "Quick actions"      },
+  adm_forecast:        { uz: "prognoz",                   ru: "прогноз",                   en: "forecast"           },
+  adm_blocked_count:   { uz: "bloklangan",                ru: "заблокировано",             en: "blocked"            },
+  adm_7d:              { uz: "7 kunda",                   ru: "за 7 дней",                 en: "in 7 days"          },
+  adm_30d:             { uz: "30 kunda",                  ru: "за 30 дней",                en: "in 30 days"         },
+  adm_24h:             { uz: "24 soatda",                 ru: "за 24 часа",                en: "in 24h"             },
+  adm_active_badge:    { uz: "✓ Aktiv",                   ru: "✓ Активен",                 en: "✓ Active"           },
+  adm_paused_badge:    { uz: "Pauza",                     ru: "Пауза",                     en: "Paused"             },
+
+  // Admin — sellers
+  adm_sellers_title:    { uz: "Foydalanuvchilar",          ru: "Пользователи",        en: "Users"                },
+  adm_search_ph_seller: { uz: "Telegram ID yoki @username", ru: "ID или @username",  en: "Telegram ID or @username" },
+  adm_search:           { uz: "Qidirish",                  ru: "Поиск",               en: "Search"               },
+  adm_col_user:         { uz: "Foydalanuvchi",             ru: "Пользователь",        en: "User"                 },
+  adm_col_last_seen:    { uz: "Oxirgi marta",              ru: "Последний раз",       en: "Last seen"            },
+  adm_col_action:       { uz: "Amal",                      ru: "Действие",            en: "Action"               },
+  adm_not_found:        { uz: "Topilmadi",                 ru: "Не найдено",          en: "Not found"            },
+  adm_status_banned:    { uz: "🚫 Bloklangan",             ru: "🚫 Заблокирован",     en: "🚫 Banned"            },
+  adm_details:          { uz: "Batafsil",                  ru: "Подробнее",           en: "Details"              },
+  adm_ban:              { uz: "Bloklash",                  ru: "Заблокировать",       en: "Ban"                  },
+  adm_unban:            { uz: "Tiklash",                   ru: "Разблокировать",      en: "Unban"                },
+  adm_results:          { uz: "ta natija",                 ru: "результатов",         en: "results"              },
+
+  // Admin — bots
+  adm_bots_title:     { uz: "Barcha botlar",    ru: "Все боты",           en: "All bots"     },
+  adm_bots_not_found: { uz: "Botlar topilmadi", ru: "Боты не найдены",    en: "No bots found"},
+  adm_all_status:     { uz: "Barcha status",    ru: "Все статусы",        en: "All statuses" },
+  adm_filter:         { uz: "Filtr",            ru: "Фильтр",             en: "Filter"       },
+  adm_col_owner:      { uz: "Egasi",            ru: "Владелец",           en: "Owner"        },
+  adm_col_cost:       { uz: "Cost (30d)",       ru: "Расходы (30д)",      en: "Cost (30d)"   },
+  adm_col_created:    { uz: "Yaratilgan",       ru: "Создан",             en: "Created"      },
+
+  // Admin — revenue
+  adm_revenue_title:  { uz: "Daromad",     ru: "Доход",       en: "Revenue"  },
+  adm_col_date:       { uz: "Sana",        ru: "Дата",        en: "Date"     },
+  adm_col_amount:     { uz: "Summa",       ru: "Сумма",       en: "Amount"   },
+  adm_col_plan:       { uz: "Plan",        ru: "Тариф",       en: "Plan"     },
+  adm_no_payments:    { uz: "Hali to'lov yo'q", ru: "Платежей нет", en: "No payments yet" },
+
+  // Admin — system
+  adm_system_title:   { uz: "Tizim",            ru: "Система",          en: "System"          },
+  adm_health_ok:      { uz: "✓ Ishlamoqda",     ru: "✓ Работает",       en: "✓ Healthy"       },
+  adm_health_err:     { uz: "⚠ Muammo bor",     ru: "⚠ Есть проблемы", en: "⚠ Issues found"  },
+
+  // Admin — audit
+  adm_audit_title:    { uz: "Audit",      ru: "Аудит",        en: "Audit"      },
+  adm_col_admin:      { uz: "Admin",      ru: "Админ",        en: "Admin"      },
+  adm_col_target:     { uz: "Ob'ekt",     ru: "Объект",       en: "Target"     },
+  adm_col_event:      { uz: "Hodisa",     ru: "Событие",      en: "Event"      },
+  adm_no_logs:        { uz: "Log yo'q",   ru: "Логов нет",    en: "No logs"    },
+
+  // Admin — broadcast
+  adm_broadcast_sub:       { uz: "Hamma sellerlarga platforma boti orqali xabar yuboring", ru: "Отправьте сообщение всем продавцам через бота платформы", en: "Send a message to all sellers via the platform bot" },
+  adm_broadcast_title_lbl: { uz: "Sarlavha",       ru: "Заголовок",      en: "Title"      },
+  adm_broadcast_body_lbl:  { uz: "Matn",           ru: "Текст",          en: "Body"       },
+  adm_audience_lbl:        { uz: "Audience",       ru: "Аудитория",      en: "Audience"   },
+  adm_audience_all:        { uz: "Hammaga",        ru: "Всем",           en: "Everyone"   },
+  adm_audience_free:       { uz: "Faqat Free",     ru: "Только Free",    en: "Free only"  },
+  adm_audience_paid:       { uz: "Faqat pullik",   ru: "Только платные", en: "Paid only"  },
+  adm_audience_pro:        { uz: "Faqat Pro",      ru: "Только Pro",     en: "Pro only"   },
+  adm_audience_max:        { uz: "Faqat Max",      ru: "Только Max",     en: "Max only"   },
+  adm_broadcast_send:      { uz: "📤 Yuborish",    ru: "📤 Отправить",   en: "📤 Send"    },
+  adm_broadcast_sending:   { uz: "Yuborilmoqda...", ru: "Отправка...",   en: "Sending..." },
+  adm_broadcast_history:   { uz: "Tarix",          ru: "История",        en: "History"    },
+  adm_broadcast_empty:     { uz: "Hali yuborilmagan", ru: "Ещё не отправлено", en: "Nothing sent yet" },
+  adm_broadcast_confirm:   { uz: "foydalanuvchilarga yuborilsinmi?", ru: "пользователям — отправить?", en: "users — send?" },
+
+  // Admin — AI costs page
+  adm_ai_costs_title: { uz: "AI xarajatlar",      ru: "AI расходы",        en: "AI Costs"     },
+  adm_col_bot:        { uz: "Bot",                 ru: "Бот",               en: "Bot"          },
+  adm_col_tokens:     { uz: "Tokenlar",            ru: "Токены",            en: "Tokens"       },
 };
 
 export function getLang(): Lang {
@@ -205,6 +299,7 @@ export function getLang(): Lang {
 export function setLang(lang: Lang) {
   if (typeof window !== "undefined") {
     localStorage.setItem("bf_lang", lang);
+    document.cookie = `bf_lang=${lang}; path=/; max-age=31536000; SameSite=Lax`;
     window.location.reload();
   }
 }
