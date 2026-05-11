@@ -17,6 +17,8 @@ const nextConfig = {
   experimental: {
     // Production'da aniq domenlar — wildcard CSRF risk
     serverActions: { allowedOrigins: [APP_URL.replace(/^https?:\/\//, "")] },
+    // pdf-parse va mammoth — webpack bundle qilmasin, Node.js runtime'da ishlaydi
+    serverComponentsExternalPackages: ["pdf-parse", "mammoth"],
   },
   async headers() {
     return [
