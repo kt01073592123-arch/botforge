@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSession } from "@/lib/auth";
 import { getBot, getBotData, updateBotData } from "@/lib/bots";
+import { indexBotProducts } from "@/lib/image-search";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,6 +63,10 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     if (!bot) return NextResponse.json({ error: "Topilmadi" }, { status: 404 });
     const body = Body.parse(await req.json());
     await updateBotData(id, body);
+    // Services o'zgarganda rasm qidiruv indeksini yangilash (fire-and-forget)
+    if (body.services) {
+      indexBotProducts(id, body.services).catch(() => {});
+    }
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });

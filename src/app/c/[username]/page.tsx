@@ -5,7 +5,7 @@
 // lekin dizayn yangicha: aurora mesh background, glassmorphism cards, pill-shape
 // review chips, gradient price typography, smooth tab transitions.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import BookingSheet from "@/components/BookingSheet";
 import { t, getLang, setLang, LANGS, type Lang } from "@/lib/i18n";
@@ -127,6 +127,36 @@ export default function CustomerWebApp() {
     setLangState(next);
     if (typeof window !== "undefined") {
       window.localStorage.setItem("bf_lang", next);
+    }
+  }
+
+  // Image search
+  const [imageSearchResults, setImageSearchResults] = useState<Service[] | null>(null);
+  const [imageSearching, setImageSearching] = useState(false);
+
+  async function handleImageSearch(file: File) {
+    setImageSearching(true);
+    setImageSearchResults(null);
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await fetch(`/api/public/${username}/image-search`, {
+        method: "POST",
+        body: fd,
+      });
+      const json = await res.json();
+      if (!res.ok || !Array.isArray(json.results)) {
+        setImageSearchResults([]);
+        return;
+      }
+      const svcs = (json.results as { product_idx: number }[])
+        .map((r) => data?.services[r.product_idx])
+        .filter((s): s is Service => !!s);
+      setImageSearchResults(svcs);
+    } catch {
+      setImageSearchResults([]);
+    } finally {
+      setImageSearching(false);
     }
   }
 
@@ -403,6 +433,10 @@ export default function CustomerWebApp() {
             onUpdateQty={updateQty}
             onBook={(s) => setBookingService(s)}
             onFav={(i, name) => toggleFav(i, name)}
+            imageSearchResults={imageSearchResults}
+            imageSearching={imageSearching}
+            onImageSearch={handleImageSearch}
+            onClearImageSearch={() => setImageSearchResults(null)}
           />
         )}
 
@@ -577,7 +611,12 @@ function HomeTab(props: {
   onUpdateQty: (pid: string, delta: number) => void;
   onBook: (s: Service) => void;
   onFav: (i: number, name: string) => void;
+  imageSearchResults?: Service[] | null;
+  imageSearching?: boolean;
+  onImageSearch?: (file: File) => void;
+  onClearImageSearch?: () => void;
 }) {
+  const imgInputRef = useRef<HTMLInputElement>(null);
   const cats = [
     { id: "all" as const, name: "Hammasi", icon: "✨" },
     ...props.data.categories.sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
@@ -596,12 +635,80 @@ function HomeTab(props: {
             type="text"
             placeholder={t("mini_search")}
             value={props.searchQuery}
-            onChange={(e) => props.setSearchQuery(e.target.value)}
+            onChange={(e) => { props.setSearchQuery(e.target.value); props.onClearImageSearch?.(); }}
             className="flex-1 bg-transparent outline-none text-sm placeholder:text-gray-400"
             style={{ color: "#1A1B2E" }}
           />
+          {/* 📷 Rasm orqali qidirish */}
+          <button
+            type="button"
+            onClick={() => imgInputRef.current?.click()}
+            disabled={props.imageSearching}
+            className="text-lg leading-none transition active:scale-90 disabled:opacity-40"
+            title="Rasm orqali qidirish"
+            style={{ color: props.imageSearchResults !== null ? "#7C3AED" : "#9B9BAB" }}
+          >
+            {props.imageSearching ? "⏳" : "📷"}
+          </button>
+          <input
+            ref={imgInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) props.onImageSearch?.(f);
+              e.target.value = "";
+            }}
+          />
         </div>
       </div>
+
+      {/* Rasm qidirish natijalari */}
+      {props.imageSearchResults != null && (
+        <div className="px-4 mt-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold" style={{ color: "#7C3AED" }}>
+              📷 {props.imageSearchResults.length > 0
+                ? `${props.imageSearchResults.length} ta mos mahsulot topildi`
+                : "Mos mahsulot topilmadi"}
+            </span>
+            <button
+              onClick={props.onClearImageSearch}
+              className="text-xs"
+              style={{ color: "#9B9BAB" }}
+            >
+              ✕ Tozalash
+            </button>
+          </div>
+          {props.imageSearchResults.length > 0 && (
+            <div className="grid grid-cols-2 gap-2.5 mb-4">
+              {props.imageSearchResults.map((s) => {
+                const idx = props.data.services.indexOf(s);
+                const pid = `${s.name}_${idx}`;
+                const inCart = props.cart.find((c) => c.product_id === pid);
+                const isFav = props.favorites.includes(pid);
+                return (
+                  <ProductCard
+                    key={pid}
+                    service={s}
+                    idx={idx}
+                    accent={props.accent}
+                    primary={props.primary}
+                    gradient={props.gradient}
+                    inCartQty={inCart?.qty ?? 0}
+                    isFav={isFav}
+                    onAdd={() => props.onAdd(s, idx)}
+                    onUpdate={(d) => props.onUpdateQty(pid, d)}
+                    onFav={() => props.onFav(idx, s.name)}
+                    onBook={() => props.onBook(s)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Categories */}
       {props.data.categories.length > 0 && (
